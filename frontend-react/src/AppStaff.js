@@ -1,12 +1,8 @@
-import React, { useEffect } from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import {Switch, Route, Link, withRouter, useLocation, useHistory, Redirect} from "react-router-dom";
+import React from "react";
+import { Switch, Route, Link, withRouter, useLocation, useHistory } from "react-router-dom";
 
 import LoginPage from "features/staff/login/LoginPage";
-import { logOut } from "features/staff/login/loginSlice";
-
 import SignupPage from "features/staff/signup/SignupPage";
-
 import CategoryListPage from "features/staff/category/CategoryListPage";
 import CategoryFormPage from "features/staff/category/CategoryFormPage";
 
@@ -17,21 +13,22 @@ import OrderListPage from "features/staff/order/OrderListPage";
 import OrderDetailPage from "features/staff/order/OrderDetailPage";
 
 function AppStaff() {
+  
   const history = useHistory();
   const loc = useLocation();
-  const dispatch = useDispatch();
-  const loggedIn = useSelector(state => state.login.loggedIn);
+  const loggedIn = localStorage.getItem('token');
   const pathname = loc.pathname;
-
-  useEffect(() => {
-    if(!loggedIn && pathname !== '/staff/signup') {
-      localStorage.removeItem('token');
-      history.push('/staff');
-    }
-  }, [loggedIn]);
 
   let page = 0;
   
+  if(!loggedIn) {
+    if(pathname === '/staff/signup') {
+      return <SignupPage/>;
+    }else {
+      return <LoginPage/>;
+    }
+  }
+
   if(pathname.startsWith('/staff/product')) {
     page = 1;
 
@@ -39,15 +36,9 @@ function AppStaff() {
     page = 2;
   }
 
-  if(!loggedIn) {
-    if(pathname === '/staff/signup') {
-      return <SignupPage/>;
-    }else {
-      return <LoginPage/>;
-    }
-
-  }else if(pathname === '/staff/login' || pathname == '/staff/signup') {
-    return <Redirect to='/staff' />
+  const logOut = () => {
+    localStorage.removeItem('token');
+    history.push('/staff/login');
   }
 
   return (
@@ -56,7 +47,7 @@ function AppStaff() {
         <div className="navbar-nav">
           <Link to="/staff" className={"nav-item nav-link " + ((page==0)? "active": "")}>
             Quản lý nhóm sản phẩm
-          </Link>          
+          </Link>
           <Link to="/staff/product" className={"nav-item nav-link " + ((page==1)? "active": "")}>
             Quản lý sản phẩm
           </Link>
@@ -68,7 +59,8 @@ function AppStaff() {
         <ul className="navbar-nav ml-auto">
           <li className="nav-item dropdown no-arrow">
             <a className="nav-link dropdown-toggle p-0" data-toggle="dropdown" href="#">
-              <img className="rounded-circle" style={{width: "60px"}} src="https://raw.githubusercontent.com/pytutorial/html_samples/master/css_bootstrap/user.svg" />
+              <img className="rounded-circle" style={{width: "60px"}} src="https://raw.githubusercontent.com/pytutorial/html_samples/master/css_bootstrap/user.svg"
+                alt="" />
             </a>
             <div className="dropdown-menu dropdown-menu-right">
               <a className="dropdown-item" href="#">
@@ -76,7 +68,7 @@ function AppStaff() {
               </a>
               <div className="dropdown-divider"></div>
               <a className="dropdown-item" href={void(0)} 
-                onClick={() => dispatch(logOut())}
+                onClick={() => logOut()}
               >
                 Đăng xuất
               </a>
@@ -88,10 +80,6 @@ function AppStaff() {
       <Switch>
         {/** ===================== Category ========================== */}
 
-        <Route path="/staff" exact={true}>
-          <CategoryListPage/>
-        </Route>
-
         <Route path="/staff/category/create">
           <CategoryFormPage/>
         </Route>
@@ -100,11 +88,11 @@ function AppStaff() {
           <CategoryFormPage/>
         </Route>
 
-        {/** ===================== Product ========================== */}
-
-        <Route path="/staff/product" exact={true}>
-          <ProductListPage/>
+        <Route path="/staff" exact={true}>
+          <CategoryListPage/>
         </Route>
+
+        {/** ===================== Product ========================== */}
 
         <Route path="/staff/product/create">
           <ProductFormPage/>
@@ -114,14 +102,18 @@ function AppStaff() {
           <ProductFormPage/>
         </Route>
 
-        {/** ===================== Order ========================== */}
-
-        <Route path="/staff/order" exact={true}>
-          <OrderListPage/>
+        <Route path="/staff/product" exact={true}>
+          <ProductListPage/>
         </Route>
+
+        {/** ===================== Order ========================== */}
 
         <Route path="/staff/order/view-detail/:id">
           <OrderDetailPage/>
+        </Route>
+
+        <Route path="/staff/order" exact={true}>
+          <OrderListPage/>
         </Route>
 
       </Switch>

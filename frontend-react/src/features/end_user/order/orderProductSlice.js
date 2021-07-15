@@ -1,69 +1,51 @@
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import history from 'router_history';
 
 const orderProductSlice = createSlice({
   name: 'orderProductSlice',
 
   initialState: {
-    id: null,
-    product: null,    
-    saved: false
+    loading: true,
+    product: {},
+    errors: {}
   },
 
   reducers: {
-
-    fetchProductSuccess(state, action) {
-      state.product = action.payload || {};
-      state.id = state.product.id;
-    },
-
-    clearData(state, _) {
-      state.product = {};
-      state.save = false;
-    },
-
-    clearErrors(state, _) {
-      state.errors = {}
-    },
-
-    orderProductSuccess(state, _) {
-      state.saved = true;
-    },
-
-    orderProductFail(state, action) {
-      state.errors = action.payload || {};
-    },
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
+    }
   }
 });
 
 export const {
-  fetchProductSuccess,
-  clearData,
-  clearErrors,
-  orderProductSuccess,
-  orderProductFail,
+  setState
 } = orderProductSlice.actions;
 
 export default orderProductSlice.reducer;
 
-export function fetchProduct(id) {
-  return async dispatch => {
-    axios.get(`/api/product/${id}`).then(result => {
-      dispatch(fetchProductSuccess(result.data));
-    });
+export function initPage(id) {
+  return dispatch => {
+    dispatch(setState({product: {}, errors: {}, loading: true}));
+
+    axios.get(`/api/product/${id}`).then(result =>
+      dispatch(setState({product: result.data, loading: false}))
+    );
   }
 }
 
-export function orderProduct(id, data) {  
-  return async dispatch => {
+export function orderProduct(id, data) {
+  return dispatch => {
+
+    dispatch(setState({errors: {}}));
     
-    axios.post(`/api/order-product/${id}`, data)
-      .then(result => {
-        dispatch(orderProductSuccess(result.data));
+    axios.post(`/api/order-product/${id}`, data).then(_ => {
+      history.push('/thank-you');
 
-      }).catch(e => {        
-        dispatch(orderProductFail(e.response.data));
-      });
-
+    }).catch((e) => {
+      dispatch(setState({errors: e.response.data}));
+    });
   }
 }

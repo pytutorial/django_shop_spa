@@ -4,34 +4,31 @@ import axios from 'axios';
 const productDetailSlice = createSlice({
   name: 'productDetailSlice',
   initialState: {
-    id: null,
-    product: null,    
+    loading: true,
+    product: null
   },
 
   reducers: {
-
-    fetchProductSuccess(state, action) {
-      state.product = action.payload || {};
-      state.id = state.product.id;
-    },
-
-    clearData(state, _) {
-      state.product = {};
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  fetchProductSuccess,
-  clearData,
+  setState
 } = productDetailSlice.actions;
 
 export default productDetailSlice.reducer;
 
-export function fetchProduct(id) {
-  return async dispatch => {
-    axios.get(`/api/product/${id}`).then(result => {
-      dispatch(fetchProductSuccess(result.data));
-    });
+export function initPage(id) {
+  return dispatch => {
+    dispatch(setState({loading: true}));
+
+    axios.get(`/api/product/${id}`).then(result => 
+      dispatch(setState({product: result.data, loading: false}))
+    )
   }
 }

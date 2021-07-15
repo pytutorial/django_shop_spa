@@ -1,8 +1,5 @@
 import { combineReducers,  createSlice} from '@reduxjs/toolkit';
 
-import loginReducer from 'features/staff/login/loginSlice';
-import signupReducer from 'features/staff/signup/signupSlice';
-
 import categoryListReducer from 'features/staff/category/categoryListSlice';
 import categoryFormReducer from 'features/staff/category/categoryFormSlice';
 import productListReducer from 'features/staff/product/productListSlice';
@@ -30,8 +27,6 @@ const rootReducer = combineReducers({
   app: appSlice.reducer,
 
   // staff
-  login: loginReducer,
-  signup: signupReducer,
   
   categoryList: categoryListReducer,
   categoryForm: categoryFormReducer,

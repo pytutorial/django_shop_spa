@@ -11,6 +11,10 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = '__all__'
+        extra_kwargs = {
+            "category": {"error_messages": {"null": "Trường này là bắt buộc."}},
+            "price":  {"error_messages": {"invalid": "Giá trị không hợp lệ"}}
+        }
 
     categoryName = serializers.CharField(read_only=True, default='', source='category.name')
 

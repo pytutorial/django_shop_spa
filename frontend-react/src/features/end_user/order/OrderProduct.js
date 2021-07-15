@@ -1,31 +1,26 @@
 import React, { useEffect } from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import { useParams, Redirect } from "react-router-dom";
-import { fetchProduct, orderProduct, clearErrors } from "./orderProductSlice";
+
+import { useParams } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { initPage, orderProduct } from "./orderProductSlice";
 
 export default function OrderProduct() {
   const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.orderProduct) || {};
-
+  const state = useSelector(globalState => globalState.orderProduct);
+  
   const { id } = useParams();
 
-  useEffect(() => dispatch(fetchProduct(id)), []);
+  useEffect(() => dispatch(initPage(id)), [id]);
 
   const onOrderProduct = (e) => {
     e.preventDefault();
-    dispatch(clearErrors());
     const data = new FormData(document.getElementById('fmt'));
     dispatch(orderProduct(id, data));
   }
-
+  
   const product = state.product || {};
   const errors = state.errors || {};
-  const saved = state.saved;
-
-  if(saved) {
-    return <Redirect to='/thank-you' />;
-  }
-
+  
   return (
     <div className="container mt-5 mb-5">
       <form id="fmt" onSubmit={onOrderProduct}>

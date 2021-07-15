@@ -1,24 +1,26 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { BrowserRouter } from 'react-router-dom';
+import { Router } from 'react-router-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 import { Provider } from 'react-redux'
-import store from './store'
 import axios from 'axios';
+
+import store from './store';
+import history from './router_history';
 
 axios.defaults.baseURL = 'http://127.0.0.1:8000';
 //axios.defaults.headers.common['Authorization'] = 'Bearer ' + localStorage.getItem('token');
 axios.defaults.headers.post['Content-Type'] = 'application/json';
 
 ReactDOM.render(
-  <BrowserRouter>
+  <Router history={history}>
     <Provider store={store}>
       <App />
     </Provider>
-  </BrowserRouter>,
+  </Router>,
   document.getElementById('root')
 );
 

@@ -1,37 +1,26 @@
-import React, {useEffect, useState} from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import {useHistory} from "react-router-dom";
-import PaginationBar from "components/PaginationBar";
+import React, {useEffect} from "react";
+import { Link } from "react-router-dom";
 
-import {clearData as clearOrderDetail} from "./orderDetailSlice";
-import { fetchOrderList, setLoading, setPage, setSearchParams } from "./orderListSlice";
+import PaginationBar from "components/PaginationBar";
 import {PAGE_SIZE} from "utils/Constants";
 
-export default function OrderListPage() {
-  const history = useHistory();
-  const dispatch = useDispatch();
-  
-  const state = useSelector(globalState => globalState.orderList) || {};
-  const [keyword, setKeyword] = useState('');
+import { useDispatch, useSelector } from "react-redux";
+import { searchOrder, setPage } from "./orderListSlice";
 
-  useEffect(() => {
-    dispatch(setLoading(true));
-    dispatch(fetchOrderList());
-  }, [state.page, state.keyword]);
+export default function OrderListPage() {
+  const dispatch = useDispatch();
+  const state = useSelector(globalState => globalState.orderList);
+
+  useEffect(() => dispatch(searchOrder()), [dispatch]);
 
   const offset = (state.page - 1) * PAGE_SIZE;
-
   const items = state.items;
   const loading = state.loading;
 
-  const searchOrder = (e) => {
+  const onSearchOrder = (e) => {
     e.preventDefault();
-    dispatch(setSearchParams({keyword: keyword}));
-  }
-
-  const viewOrderDetail = (id) => {
-    dispatch(clearOrderDetail());
-    history.push(`/staff/order/view-detail/${id}`);
+    const data = new FormData(document.getElementById('fmt'));
+    dispatch(searchOrder(data.get('keyword'), 1));
   }
 
   return (
@@ -43,9 +32,12 @@ export default function OrderListPage() {
         <div className="card-body">
           <div className="row mb-4">
             <div className="col">
-              <form onSubmit={searchOrder}>
-                <input className="form-control" placeholder='Tìm theo tên sản phẩm/tên/số điện thoại Khách hàng'
-                  value={keyword} onChange={e => setKeyword(e.target.value)}/>
+              <form id="fmt" onSubmit={onSearchOrder}>
+                <input name="keyword" key={state.page} 
+                  className="form-control" 
+                  placeholder='Tìm theo tên sản phẩm/tên/số điện thoại Khách hàng'
+                  defaultValue={state.keyword}
+                />
               </form>
             </div>
           </div>
@@ -63,7 +55,7 @@ export default function OrderListPage() {
               </tr>
             </thead>
             <tbody>        
-              {!loading && items && items.length == 0 && 
+              {!loading && items && items.length === 0 && 
                 <tr>
                   <td colspan="7">Không có đơn hàng nào</td>
                 </tr>
@@ -82,9 +74,11 @@ export default function OrderListPage() {
                     {o.status === 2 && <span> Đã hủy </span>}                
                   </td>
                   <td className="text-center">
-                    <button className="btn btn-secondary" onClick={() => viewOrderDetail(o.id)}>
+                    <Link className="btn btn-secondary" 
+                      to={`/staff/order/view-detail/${o.id}`}
+                    >
                       Xem
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               )}

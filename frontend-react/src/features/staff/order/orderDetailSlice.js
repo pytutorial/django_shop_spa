@@ -1,89 +1,72 @@
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import history from 'router_history';
 
 const orderDetailSlice = createSlice({
   name: 'orderDetailSlice',
   initialState: {
     order: {},
     error: '',
-    saved: false
+    loading: true
   },
 
   reducers: {
-    confirmOrderSuccess(state, _) {
-      state.saved = true;
-    },
-
-    confirmOrderFail(state, action) {
-      state.error = action.payload.error;
-    },
-
-    cancelOrderSuccess(state, _) {
-      state.saved = true;
-    },
-
-    cancelOrderFail(state, action) {
-      state.error = action.payload.error;
-    },
-
-    fetchOrderSuccess(state, action) {      
-      state.order = action.payload || {};      
-    },
-
-    clearError(state, _) {
-      state.error = '';
-    },
-
-    clearData(state, _) {
-      state.saved = false;
-      state.error = '';
-      state.order = {};
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  confirmOrderSuccess,
-  confirmOrderFail,
-  cancelOrderSuccess,
-  cancelOrderFail,
-  fetchOrderSuccess,
-  clearError,
-  clearData,
+  setState
 } = orderDetailSlice.actions;
 
 export default orderDetailSlice.reducer;
 
-export function confirmOrder(id, data) {  
-  return async dispatch => {
+export function initPage(id) {
+  return dispatch => {
+    dispatch(setState({order:{}, error: ''}));
     
-    axios.post(`/api/order/confirm/${id}`, data)
-      .then(result => {
-        dispatch(confirmOrderSuccess(result.data))
-
-      }).catch(e =>
-        dispatch(confirmOrderFail(e.toString()))
-      );
-  }
-}
-
-export function cancelOrder(id, data) {  
-  return async dispatch => {
-    
-    axios.post(`/api/order/cancel/${id}`, data)
-      .then(result => {
-        dispatch(cancelOrderSuccess(result.data))
-
-      }).catch(e =>
-        dispatch(cancelOrderFail(e.toString()))
-      );
-  }
-}
-
-export function fetchOrder(id) {
-  return async dispatch => {
     axios.get(`/api/order/${id}`).then(result => {
-      dispatch(fetchOrderSuccess(result.data));
+      dispatch(setState({order: result.data}));
     });
   }
 }
+
+export function confirmOrder(id) {
+  return dispatch => {
+    if(!window.confirm('Xác nhận đơn hàng này đã được giao?')) {
+      return;
+    }
+
+    dispatch(setState({error: ''}));
+
+    axios.post(`/api/order/confirm/${id}`)
+      .then(_ => {
+        history.push('/staff/order');
+
+      }).catch(e =>
+        dispatch(setState({error: e.toString()}))
+      );
+  }
+};
+
+export function cancelOrder(id) {
+  return dispatch => {
+    if(!window.confirm('Hủy đơn hàng này ?')) {
+      return;
+    }
+
+    dispatch(setState({error: ''}));
+
+    axios.post(`/api/order/cancel/${id}`)
+      .then(_ => {
+        history.push('/staff/order');
+
+      }).catch(e =>
+        dispatch(setState({error: e.toString()}))
+      );
+  }
+};

@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
-import {PAGE_SIZE} from "utils/Constants";
 import axios from 'axios';
+import {PAGE_SIZE} from "utils/Constants";
 
 const orderListSlice = createSlice({
   name: 'orderListSlice',
@@ -14,73 +14,46 @@ const orderListSlice = createSlice({
   },
 
   reducers: {
-    fetchOrderListSuccess(state, action) {
-      state.items = action.payload.items;
-      state.total = action.payload.total;
-      state.page = action.payload.page;      
-      state.loading = false;     
-    },
-
-    setPage(state, action) {      
-      state.page = action.payload;      
-    },
-
-    setSearchParams(state, action) {
-      state.keyword = action.payload.keyword;
-      state.page = 1;
-    },
-
-    setLoading(state, action) {
-      state.loading = action.payload;
-    },
-
-    setError(state, action) {
-      state.error = action.payload;
-    },
-
-    clearError(state, _) {
-      state.error = '';
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  fetchOrderListSuccess,
-  setPage,
-  setSearchParams,
-  setLoading,
-  setError,
-  clearError,
+  setState
 } = orderListSlice.actions;
 
 export default orderListSlice.reducer;
 
-export function fetchOrderList(page) {
+export function searchOrder(keyword, page) {
   return async (dispatch, getState) => {
     const state = getState().orderList;
 
-    axios.get(`/api/order/count?keyword=${state.keyword}`).then(result => {
-      const total = result.data.count || 0;
-      let page = state.page;      
-      const numPage = Math.ceil(total / PAGE_SIZE);
-      if(page < 1) page = 1;
-      if(page > numPage) page = numPage;
+    keyword = keyword != null ? keyword: state.keyword;
+    page = page != null? page: state.page;
+    const start = (page-1) * PAGE_SIZE;
 
-      const start = (page-1) * PAGE_SIZE;
+    dispatch(setState({loading: true, total: 0, items: []}));
 
-      let url = '/api/order/search?' +
-                `keyword=${state.keyword}&` +
-                `start=${start}&count=${PAGE_SIZE}`;
-
-      axios.get(url).then(result => {
-        const items = result.data;
-        dispatch(fetchOrderListSuccess({
-          items: items, 
-          total: total,
-          page: page
-        }))
-      });
+    try {
+      let result = await axios.get(`/api/order/count?keyword=${keyword}`);
+      let total = result?.data?.count || 0;
       
-    }).catch(e => dispatch(setError({error : e.toString()})));
+      result = await axios.get(`/api/order/search?keyword=${keyword}&start=${start}&count=${PAGE_SIZE}`);
+      let items = result.data || [];
+      dispatch(setState({total, items, keyword, page, loading: false }));
+    }catch(e) {
+      console(e);
+    }
+  }
+}
+
+export function setPage(page) {
+  return (dispatch, getState) => {
+    const state = getState().orderList;
+    dispatch(searchOrder(state.keyword, page));
   }
 }

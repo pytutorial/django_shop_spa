@@ -1,31 +1,29 @@
 import React, { useEffect } from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import { Link, useParams, useHistory } from "react-router-dom";
-import { fetchProduct } from "./productDetailSlice";
-import {clearData as clearOrderData} from "../order/orderProductSlice";
+import { Link, useParams } from "react-router-dom";
 
+import { initPage } from "./productDetailSlice";
 import "./ProductDetailPage.css";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function ProductDetailPage() {
-  const history = useHistory();
   const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.productDetail) || {};
-  const product = state.product || {};
+  const state = useSelector(globalState => globalState.productDetail);
   const { id } = useParams();
 
-  useEffect(() => dispatch(fetchProduct(id)), []);
+  useEffect(() => dispatch(initPage(id)), [dispatch, id]);
 
-  const orderProduct = (id) => {
-    dispatch(clearOrderData());
-    history.push(`/order-product/${id}`);
-  };
+  if(state.loading || !state.product){
+    return <></>;
+  }
+
+  const product =  state.product;
 
   return (
     <div className="container mt-5 mb-5">
       <div className="row">
         <div className="col-6">
           {product.image && 
-            <img className='product-detail-image' src={product.image} />
+            <img className='product-detail-image' src={product.image} alt=""/>
           }
         </div>
 
@@ -45,8 +43,17 @@ export default function ProductDetailPage() {
             </tbody>
           </table>
           <br />
-          <Link className="btn btn-secondary mr-2" to="/">Quay lại</Link>
-          <button className="btn btn-primary" onClick={() => orderProduct(product.id)}>Mua hàng</button>
+
+          <Link className="btn btn-secondary mr-2" 
+            to="/">
+            Quay lại
+          </Link>
+
+          <Link className="btn btn-primary" 
+            to={`/order-product/${product.id}`}
+          >
+            Mua hàng
+          </Link>
         </div>
       </div>
     </div>

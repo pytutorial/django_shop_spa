@@ -1,107 +1,96 @@
 import { createSlice } from '@reduxjs/toolkit';
+
 import axios from 'axios';
+
 import {PAGE_SIZE} from "utils/Constants";
 
-const productListSliceUser = createSlice({
+const productListSlice = createSlice({
   name: 'productListSliceUser',
   initialState: {
-    items: null, 
-    page: 1,
-    total: 0,   
-    categoryList: [],
-    name: '',
+    items: [],    
+    keyword: '',
     categoryId: '',
     priceRangeId: '',
-    error: '',
-    loading: true
+    page: 1,
+    total: 0,
+    loading: true,
+    error: ''
   },
 
   reducers: {
-    setSearchParams(state, action) {
-      state.page = 1;
-      state.name = action.payload.name;
-      state.categoryId = action.payload.categoryId;
-      state.priceRangeId = action.payload.priceRangeId;
-    },
-
-    fetchProductListSuccess(state, action) {
-      state.items = action.payload.items;
-      state.total = action.payload.total;
-      state.page = action.payload.page;
-      state.loading = false;
-    },
-
-    fetchCategoryListSuccess(state, action) {
-      state.categoryList = action.payload;
-    },
-
-    setPage(state, action) {
-      state.page = action.payload;
-    },
-
-    setLoading(state, action) {
-      state.loading = action.payload;
-    },
-
-    setError(state, action) {
-      state.error = action.payload;
-    },
-
-    clearError(state, _) {
-      state.error = null;
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  setSearchParams,
-  fetchProductListSuccess,
-  fetchCategoryListSuccess,
-  setPage,
-  setLoading,
-  setError,
-  clearError,
-} = productListSliceUser.actions;
+  setState
+} = productListSlice.actions;
 
-export default productListSliceUser.reducer;
+export default productListSlice.reducer;
 
-export function fetchProductList() {
-  
+export function searchProduct(keyword, categoryId, priceRangeId, page) {
   return async (dispatch, getState) => {
-    const state = getState().productListUser;    
+    console.log({keyword, categoryId, priceRangeId, page});
+    const state = getState().productListUser;
+    keyword = keyword != null ? keyword: state.keyword;
+    categoryId = categoryId != null? categoryId: state.categoryId;
+    priceRangeId =  priceRangeId != null? priceRangeId: state.priceRangeId;
 
-    axios.get(`/api/product/count?name=${state.name}`).then(result => {
-      const total = result.data.count || 0;
+    page = page != null? page: state.page;
+    const start = (page-1) * PAGE_SIZE;
+
+    dispatch(setState({loading: true, total: 0, items: []}));
+
+    try {
+      let countUrl = `/api/product/count?name=${keyword}` + 
+                        `&categoryId=${categoryId}` + 
+                        `&priceRangeId=${priceRangeId}`;
+
+      let result = await axios.get(countUrl);
+      let total = result?.data?.count || 0;
       
-      let page = state.page;      
-      const numPage = Math.ceil(total / PAGE_SIZE);
-      if(page < 1) page = 1;
-      if(page > numPage) page = numPage;
+      let searchUrl = `/api/product/search?name=${keyword}` + 
+                        `&categoryId=${categoryId}` + 
+                        `&priceRangeId=${priceRangeId}` +
+                        `&start=${start}&count=${PAGE_SIZE}`;  
 
-      const start = (page-1) * PAGE_SIZE;
-      
-      let url = '/api/product/search?' +
-                `&categoryId=${state.categoryId}` + 
-                `&priceRangeId=${state.priceRangeId}` +
-                `&name=${state.name}` +
-                `&start=${start}&count=${PAGE_SIZE}`;
+      result = await axios.get(searchUrl);
+      let items = result.data || [];
+      console.log(items);
+      dispatch(
+        setState({
+          total, 
+          items, 
+          keyword, 
+          categoryId, 
+          priceRangeId, 
+          page, 
+          loading: false 
+        })
+      );
 
-      axios.get(url).then(result => {
-        const items = result.data;
-        dispatch(fetchProductListSuccess({
-          items: items, 
-          total: total,
-          page: page
-        }))
-      });
-    });
+    }catch(e) {
+      console.log(e);
+    }
+  };
+}
+
+export function setPage(page) {
+  return (dispatch, getState) => {
+    const state = getState().productListUser;
+    dispatch(searchProduct(state.keyword, state.categoryId, state.priceRangeId, page));
   }
 }
 
-export function fetchCategoryList() {
+export function initPage() {
   return dispatch => {
     axios.get('/api/category/').then(result => {
-      dispatch(fetchCategoryListSuccess(result.data));
+      dispatch(setState({categoryList: result.data}));
     });
+    dispatch(searchProduct());
   }
 }

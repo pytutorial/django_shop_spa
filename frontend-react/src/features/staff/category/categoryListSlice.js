@@ -1,97 +1,75 @@
 import { createSlice } from '@reduxjs/toolkit';
-import {PAGE_SIZE} from "utils/Constants";
 import axios from 'axios';
+import {PAGE_SIZE} from "utils/Constants";
 
 const categoryListSlice = createSlice({
   name: 'categoryListSlice',
+
   initialState: {
-    items: [],
-    name: '',
+    items: [],    
+    keyword: '',
     page: 1,
     total: 0,
-    error: '',
     loading: true,
+    error: ''
   },
 
-  reducers: {
-    fetchCategoryListSuccess(state, action) {
-      state.items = action.payload.items;
-      state.total = action.payload.total;
-      state.page = action.payload.page;
-      state.loading = false;
-    },
-
-    setPage(state, action) {      
-      state.page = action.payload;      
-    },
-
-    setSearchParams(state, action) {
-      state.name = action.payload.name;      
-      state.page = 1;
-    },
-
-    setError(state, action) {
-      state.error = action.payload;
-    },
-
-    setLoading(state, action) {
-      state.loading = action.payload;
-    },
-
-    clearError(state, _) {
-      state.error = '';
+  reducers:{
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  fetchCategoryListSuccess,
-  setPage,
-  setSearchParams,  
-  setLoading,
-  setError,
-  clearError,
+  setState
 } = categoryListSlice.actions;
 
 export default categoryListSlice.reducer;
 
-export function fetchCategoryList() {
+export function searchCategory(keyword, page) {
   return async (dispatch, getState) => {
     const state = getState().categoryList;
-    
-    axios.get(`/api/category/count?name=${state.name}`).then(result => {
-      const total = result.data.count || 0;
-  
-      let page = state.page;     
-      const numPage = Math.ceil(total / PAGE_SIZE);
-      if(page < 1) page = 1;
-      if(page > numPage) page = numPage;
+    keyword = keyword != null ? keyword: state.keyword;
+    page = page != null? page: state.page;
+    const start = (page-1) * PAGE_SIZE;
 
-      const start = (page-1) * PAGE_SIZE;
+    dispatch(setState({loading: true, total: 0, items: []}));
+
+    try {
+      let result = await axios.get(`/api/category/count?name=${keyword}`);
+      let total = result?.data?.count || 0;
       
-      let url = '/api/category/search?' +
-                `name=${state.name}&` +
-                `start=${start}&count=${PAGE_SIZE}`;
+      result = await axios.get(`/api/category/search?name=${keyword}&start=${start}&count=${PAGE_SIZE}`);
+      let items = result.data || [];
+      dispatch(setState({total, items, page, keyword, loading: false }));
+    }catch(e) {
+      console(e);
+    }
+  }
+}
 
-      axios.get(url).then(result => {
-        const items = result.data;
-        dispatch(fetchCategoryListSuccess({
-          items: items, 
-          total: total,
-          page: page
-        }))
-      });
-
-    });    
+export function setPage(page) {
+  return (dispatch, getState) => {
+    const state = getState().categoryList;
+    dispatch(searchCategory(state.keyword, page));
   }
 }
 
 export function deleteCategory(id) {
-  return async dispatch => {
-    
-    axios.delete(`/api/category/${id}`).then(_ => {      
-      dispatch(fetchCategoryList());
+  return (dispatch, getState) => {
+    if(window.confirm('Bạn có muốn xóa nhóm sản phẩm này?')) {
 
-    }).catch(e => dispatch(setError(e.toString())));    
-  } 
+      axios.delete(`/api/category/${id}`).then(_ => {
+        const state = getState().categoryList;
+        const pageOffset = (state.page > 1 && state.total === (state.page-1) * PAGE_SIZE + 1) ? 1 : 0;
+        dispatch(searchCategory(state.keyword, state.page - pageOffset));
+      }).catch(e => 
+        dispatch(setState({error: e.toString()}))
+      );
+      
+    }
+  }
 }

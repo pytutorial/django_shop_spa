@@ -1,28 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useHistory } from "react-router-dom";
-import { useSelector, useDispatch } from 'react-redux';
-import { login, clearError } from './loginSlice';
+import axios from 'axios';
 
 export default function LoginPage() {
   const history = useHistory();
-  const dispatch = useDispatch();
-  let [username, setUsername] = useState('');
-  let [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  
+  const login = () => {
+    setError('');
 
-  const state = useSelector(globalState => globalState.login);
-  const error = state.error;
-  const loggedIn = state.loggedIn;
-
-  useEffect(() => {
-    if (loggedIn) {
-      history.push('/staff');
-    }
-  }, [loggedIn]);
-
-  const onLogin = (e) => {
-    e.preventDefault();
-    dispatch(clearError());
-    dispatch(login(username, password));
+    axios.post('/api/token', { username, password })
+    .then(result => {
+      console.log(result.data);
+      localStorage.setItem('token', result.data.access);
+      history.push('/staff')
+    }).catch(e => 
+      setError('Tên đăng nhập hoặc mật khẩu không đúng')
+    );
   };
 
   const styles = {
@@ -34,7 +30,6 @@ export default function LoginPage() {
       marginRight: "auto",
       marginTop: "100px"
     },
-
   };
 
   return (
@@ -42,7 +37,7 @@ export default function LoginPage() {
       <div style={styles.login_form}>
         <h3>Đăng nhập</h3>
         <br />
-        <form method="POST" onSubmit={onLogin}>
+        <form method="POST" onSubmit={(e) => {e.preventDefault(); login();}}>
 
           <div className="form-group">
             <label>Tên tài khoản</label>

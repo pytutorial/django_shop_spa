@@ -1,58 +1,25 @@
-import React, {useEffect, useState} from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import { useHistory} from "react-router-dom";
+import React, {useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+
+import { searchCategory, setPage, deleteCategory } from "./categoryListSlice";
 import PaginationBar from "components/PaginationBar";
-
 import {PAGE_SIZE} from "utils/Constants";
-import { 
-  fetchCategoryList, 
-  setPage, 
-  setSearchParams, 
-  deleteCategory, 
-  clearError, 
-  setLoading
-} from './categoryListSlice.js';
-
-import { clearData as clearFormData } from "./categoryFormSlice";
 
 export default function CategoryListPage() {
-  const history = useHistory();
   const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.categoryList) || {};
-  
-  const [name, setName] = useState('');
+  const state = useSelector(globalState => globalState.categoryList);
 
-  useEffect(() => {
-    dispatch(setLoading(true));
-    dispatch(fetchCategoryList());    
-  }, [state.page, state.name]);
+  useEffect(() => dispatch(searchCategory()), [dispatch]);
 
+  const onSearchCategory = (e) => {
+    e.preventDefault();
+    const data = new FormData(document.getElementById('fmt'));
+    dispatch(searchCategory(data.get('keyword'), 1));
+  }
   const offset = (state.page - 1) * PAGE_SIZE;
-
   const items = state.items || [];
   const loading = state.loading;
-
-  const searchCategory = (e) => {    
-    e.preventDefault();    
-    dispatch(setSearchParams({name: name}));
-  }
-
-  const confirmDelete = (id) => {
-    if(window.confirm('Bạn có muốn xóa nhóm sản phẩm này?')) {
-      dispatch(clearError());
-      dispatch(deleteCategory(id));
-    }
-  }
-
-  const addCategory = () => {
-    dispatch(clearFormData());
-    history.push('/staff/category/create');
-  }
-
-  const editCategory = (id) => {
-    dispatch(clearFormData());
-    history.push(`/staff/category/update/${id}`);
-  }
 
   return (
     <div className="p-3">
@@ -63,16 +30,18 @@ export default function CategoryListPage() {
         <div className="card-body">
           <div className="row mb-4">
             <div className="col-3">
-              <button className="btn btn-sm btn-primary"
-                onClick={addCategory}
+              <Link className="btn btn-sm btn-primary"
+                to="/staff/category/create"
               >
                 Thêm nhóm sản phẩm
-              </button>
+              </Link>
             </div>
             <div className="col-6 offset-3">
-              <form onSubmit={searchCategory}>
-                <input className="form-control" placeholder='Tìm theo tên nhóm sản phẩm'
-                  value={name} onChange={e => setName(e.target.value)}/>
+              <form id="fmt" onSubmit={onSearchCategory}>
+                <input name="keyword" key={state.page}
+                  className="form-control" 
+                  placeholder='Tìm theo tên nhóm sản phẩm'
+                  defaultValue={state.keyword}/>
               </form>
             </div>
           </div>
@@ -87,7 +56,7 @@ export default function CategoryListPage() {
                 </tr>
               </thead>
               <tbody>
-                {!loading && items && items.length == 0 &&
+                {!loading && items && items.length === 0 &&
                   <tr><td colSpan="4">Không tìm thấy nhóm sản phẩm nào</td></tr>
                 }
                 {!loading && items && items.map((category, i) => 
@@ -96,13 +65,13 @@ export default function CategoryListPage() {
                     <td>{category.code}</td>
                     <td>{category.name}</td>
                     <td className='text-center'>
-                      <button className='btn btn-sm btn-primary mr-2'
-                        onClick={() => editCategory(category.id)} 
+                      <Link className='btn btn-sm btn-primary mr-2'
+                        to={`/staff/category/update/${category.id}`}
                       >
                         Chỉnh sửa
-                      </button>
+                      </Link>
                       <button className='btn btn-sm btn-danger' 
-                        onClick={() => confirmDelete(category.id)}
+                        onClick={() => dispatch(deleteCategory(category.id))}
                       >
                         Xóa
                       </button>

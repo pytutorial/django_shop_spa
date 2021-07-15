@@ -1,70 +1,67 @@
 import React, { useEffect } from "react";
-import { useHistory } from "react-router-dom";
-import { useSelector, useDispatch } from 'react-redux';
-
-import { fetchProductList, fetchCategoryList, setLoading, setPage, setSearchParams  } from "./productListSlice";
-import { clearData as clearProductDetail } from "../product_detail/productDetailSlice";
+import { Link } from "react-router-dom";
 
 import PaginationBar from "components/PaginationBar";
 import { PAGE_SIZE, BACKEND_URL } from "utils/Constants";
+import { searchProduct, setPage, initPage } from "./productListSlice";
 
 import './ProductListPage.css';
-
+import { useDispatch, useSelector } from "react-redux";
 
 export default function ProductListPage() {
-  const history = useHistory();
+  /*
+  const [state, setState] = useReducer(
+    (state, newState) => ({...state, ...newState}),
+    {keyword: '', categoryId: '', priceRangeId: ''}
+  );*/
+
   const dispatch = useDispatch();
   const state = useSelector(globalState => globalState.productListUser) || {};
   const categoryList = state.categoryList || [];
 
-  useEffect(() => dispatch(fetchCategoryList()), []);
-
-  useEffect(() => {
-    dispatch(setLoading(true));
-    dispatch(fetchProductList());
-  }, [state.page, state.name, state.categoryId, state.priceRangeId]);
-
-  const searchProduct = (e) => {
+  useEffect(() => dispatch(initPage()), [dispatch]);
+  
+  const onSearchProduct = (e) => {
     e.preventDefault();
-    const data = new FormData(document.getElementById('fmt'));
-
+    let data = new FormData(document.getElementById('fmt'));
+    
     dispatch(
-      setSearchParams({
-        name: data.get('name'),
-        categoryId: data.get('categoryId'),
-        priceRangeId: data.get('priceRangeId')
-      })
+      searchProduct(
+        data.get('keyword'), 
+        data.get('categoryId'), 
+        data.get('priceRangeId'),
+        1
+      )
     );
-  };
-
-  let viewProduct = (id) => {
-    dispatch(clearProductDetail());
-    history.push(`/view-product/${id}`);
   }
-
-  const items = state.items;
-
-  if(!items) return (<></>);
-
+  
   return (
     <div className="container mt-5 mb-5">
       <div className="row">
         <div className="col-3 p-3 card">
-          <form id="fmt" onSubmit={searchProduct}>
+          <form id="fmt" onSubmit={onSearchProduct}>
             <div className='product-search-info mt-3'>
               <label><b>Tên sản phẩm</b></label>
-              <input name="name" className="form-control" placeholder="Nhập tên sản phẩm để tìm" />
+              <input key={state.page}
+                defaultValue={state.keyword}
+                name="keyword" className="form-control"
+                placeholder="Nhập tên sản phẩm để tìm" 
+              />
             </div>
 
             <div className='category-search-info mt-3'>
               <label><b>Hãng sản xuất:</b></label>
               <div>
-                <input type='radio' name='categoryId' defaultChecked={true} value='' />
+                <input key={state.page} type='radio' name='categoryId' 
+                  defaultChecked={state.categoryId||'' === ''} value='' />
                 <label>Tất cả</label>
               </div>
               {categoryList.map((c, i) =>
                 <div key={i}>
-                  <input name='categoryId' type="radio" value={c.id} />
+                  <input key={state.page}
+                    defaultChecked={c.id === Number(state.categoryId)}
+                    name='categoryId' type="radio" value={c.id} 
+                  />
                   <label>{c.name}</label>
                 </div>
               )}
@@ -73,22 +70,26 @@ export default function ProductListPage() {
             <div className='price-search-info mt-3'>
               <label><b>Mức giá:</b></label>
               <div>
-                <input type="radio" name="priceRangeId" defaultChecked={true} value='' />
+                <input key={state.page} type="radio" name="priceRangeId" value='' 
+                  defaultChecked={state.priceRangeId||'' === ''}/>
                 <label>Tất cả</label>
               </div>
 
               <div>
-                <input type="radio" name="priceRangeId" value='1' />
+                <input key={state.page} type="radio" name="priceRangeId" value='1' 
+                  defaultChecked={Number(state.priceRangeId) === 1}/>
                 <label>Dưới 10 triệu</label>
               </div>
 
               <div>
-                <input type="radio" name="priceRangeId" value='2' />
+                <input key={state.page} type="radio" name="priceRangeId" value='2' 
+                  defaultChecked={Number(state.priceRangeId) === 2}/>
                 <label>Từ 10-20 triệu</label>
               </div>
 
               <div>
-                <input type="radio" name="priceRangeId" value='3' />
+                <input key={state.page} type="radio" name="priceRangeId" value='3' 
+                  defaultChecked={Number(state.priceRangeId) === 3}/>
                 <label>Trên 20 triệu</label>
               </div>
             </div>
@@ -100,12 +101,12 @@ export default function ProductListPage() {
         </div>
         <div className="col-9">
           <ul className="list-unstyled row">
-            {items.map((p, i) =>
+            {!state.loading && state.items.map((p, i) =>
               <li key={i} className="list-item col-sm-4 mt-3">
                 <div className='item-container'>
-                  <a href={void(0)} onClick={() => viewProduct(p.id)} className='product-item'>
+                  <Link to={`/view-product/${p.id}`} className='product-item'>
                     {p.image &&
-                      <img src={BACKEND_URL + p.image} className='product-image' />
+                      <img src={BACKEND_URL + p.image} className='product-image' alt="" />
                     }
                     <div className="item-info">
                       <div>
@@ -116,7 +117,7 @@ export default function ProductListPage() {
                         <span className='price'>{p.price} ₫</span>
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 </div>
               </li>
             )}
@@ -126,7 +127,7 @@ export default function ProductListPage() {
             page={state.page}
             setPage={(page) => dispatch(setPage(page))}
           />
-          {items.length == 0 && <span>Không tìm thấy sản phẩm nào</span>}
+          {!state.loading && state.items.length === 0 && <span>Không tìm thấy sản phẩm nào</span>}
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ export default function PaginationBar(props) {
       <ul className="pagination">
         <li className="page-item">
           <a className="page-link" href={void(0)}
-            onClick={() => setPage(1)}
+            onClick={() => {if(page > 1) setPage(1);}}
           >&laquo;</a>
         </li>
 
@@ -32,7 +32,7 @@ export default function PaginationBar(props) {
 
         <li className="page-item">
           <a className="page-link" href={void(0)}
-            onClick={() => setPage(numPage)}
+            onClick={() => {if(page < numPage) setPage(numPage);}}
           >&raquo;</a>
         </li>        
       </ul>

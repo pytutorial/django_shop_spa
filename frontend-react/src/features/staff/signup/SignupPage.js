@@ -1,35 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { useHistory } from "react-router-dom";
-import { useSelector, useDispatch } from 'react-redux';
-import { signup, clearError, setError } from './signupSlice';
+import React, { useState } from 'react';
+import axios from 'axios';
+import { useHistory } from 'react-router-dom';
 
 export default function SignupPage() {
   const history = useHistory();
-  const dispatch = useDispatch();
-  let [username, setUsername] = useState('');
-  let [password, setPassword] = useState('');
-  let [password2, setPassword2] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState(''); 
+  const [error, setError] = useState('');
 
-  const state = useSelector(globalState => globalState.signup);
-  const error = state.error;
-  const signedUp = state.signedUp;
-
-  useEffect(() => {
-    if (signedUp) {
-      history.push('/staff');
-    }
-  }, [signedUp]);
-
-  const onSignup = (e) => {
-    e.preventDefault();
+  const signup = () => {
     
     if(password !== password2) {
-      dispatch(setError({error: 'Mật khẩu xác thực không đúng'}));
+      setError('Mật khẩu xác thực không đúng');
       return;
     }
 
-    dispatch(clearError());
-    dispatch(signup(username, password));
+    setError('');
+
+    axios.post('/api/signup', { username, password })
+      .then(_ => {
+        axios.post('/api/token', { username, password }).then(result => {          
+          localStorage.setItem('token', result.data.access);
+          history.push('/staff/')
+        });        
+      }).catch(e => setError(e.response.data));
   };
 
   const styles = {
@@ -49,7 +44,7 @@ export default function SignupPage() {
       <div style={styles.signup_form}>
         <h3>Đăng nhập</h3>
         <br />
-        <form method="POST" onSubmit={onSignup}>
+        <form method="POST" onSubmit={(e) => {e.preventDefault(); signup()}}>
 
           <div className="form-group">
             <label>Tên tài khoản</label>
@@ -64,7 +59,7 @@ export default function SignupPage() {
             <input type="password" 
               className="form-control" 
               value={password}
-              onChange={(e) => setPassword(e.target.value)} />
+              onChange={(e) => setPassword(e.target.value) } />
           </div>
 
           <div className="form-group">
@@ -72,11 +67,11 @@ export default function SignupPage() {
             <input type="password" 
               className="form-control" 
               value={password2}
-              onChange={(e) => setPassword2(e.target.value)} />
+              onChange={(e) => setPassword2(e.target.value) } />
           </div>
 
           <div className="form-group">
-            <span id="error" style={{color:"red"}}>{error}</span>
+            <span style={{color:"red"}}>{error}</span>
           </div>
 
           <br />

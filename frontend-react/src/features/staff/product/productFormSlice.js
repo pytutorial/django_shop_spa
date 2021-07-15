@@ -1,97 +1,68 @@
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import history from 'router_history';
 
 const productFormSlice = createSlice({
   name: 'productFormSlice',
   initialState: {
-    errors: {},
     product: {},
-    categoryList: null,
-    saved: false
+    errors: {},
+    categoryList: []
   },
 
   reducers: {
-    saveProductSuccess(state, _) {
-      state.saved = true;
-    },
-
-    saveProductFail(state, action) {
-      state.errors = action.payload || {};
-    },
-
-    fetchProductSuccess(state, action) {      
-      state.product = action.payload || {};      
-    },
-
-    fetchCategoryListSuccess(state, action) {
-      state.categoryList = action.payload || [];
-    },
-
-    setErrors(state, action) {
-      state.errors = action.payload.errors;
-    },
-
-    clearErrors(state, _) {
-      state.errors = {};
-    },
-
-    clearData(state, _) {
-      state.errors = {};
-      state.saved = false;
-      state.product = {};
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  saveProductSuccess,
-  saveProductFail,
-  fetchProductSuccess,
-  fetchCategoryListSuccess,
-  setErrors,
-  clearErrors,
-  clearData,
+  setState
 } = productFormSlice.actions;
 
 export default productFormSlice.reducer;
 
-export function saveProduct(id, data) {  
-  return async dispatch => {
-    const headers = { "Content-Type": "multipart/form-data" };
-    
-    if (!id) {
-      axios.post('/api/product/', data, {headers})
-        .then(result => {
-          dispatch(saveProductSuccess(result.data));
+export function initPage(id) {
+  return dispatch => {
+    dispatch(setState({product: {}, errors: {}}));
 
-        }).catch(e => {        
-          dispatch(saveProductFail(e.response.data));
-        })
+    axios.get('/api/category/').then(result => {
+      dispatch(setState({categoryList: result.data}));
+    });
 
-    } else {
-      axios.patch(`/api/product/${id}/`, data, {headers})
-        .then(result => {
-          dispatch(saveProductSuccess(result.data));
-
-        }).catch(e => {
-          dispatch(saveProductFail(e.response.data));
-        })
+    if (id) {
+      axios.get(`/api/product/${id}`).then(result => {
+        dispatch(setState({product: result.data}));
+      });
     }
   }
 }
 
-export function fetchProduct(id) {
-  return async dispatch => {
-    axios.get(`/api/product/${id}`).then(result => {
-      dispatch(fetchProductSuccess(result.data));
-    });
-  }
-}
-
-export function fetchCategoryList() {
+export function saveProduct(id, data) {
   return dispatch => {
-    axios.get('/api/category/').then(result => {
-      dispatch(fetchCategoryListSuccess(result.data));
-    });
+    const headers = { "Content-Type": "multipart/form-data" };
+    
+    dispatch(setState({errors: {}}));
+
+    if(!id) {
+      axios.post('/api/product/', data, {headers})
+        .then(_ => {
+          history.push('/staff/product/');
+
+        }).catch(e => {
+          dispatch(setState({errors: e.response.data}));
+        });
+      }else {
+        axios.put(`/api/product/${id}/`, data, {headers})
+        .then(_ => {
+          history.push('/staff/product');
+
+        }).catch(e => {
+          dispatch(setState({errors: e.response.data}));
+        });
+      }
   }
 }

@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { Switch, Route, Link, withRouter, useLocation, useHistory } from "react-router-dom";
+import React from "react";
+import { Switch, Route, Link, withRouter } from "react-router-dom";
 
 import ProductListPage from "features/end_user/product_list/ProductListPage";
 import ProductDetailPage from "features/end_user/product_detail/ProductDetailPage";
@@ -25,10 +25,7 @@ function AppEndUser() {
       </div>
         
       <Switch>
-        <Route path="/" exact={true}>
-          <ProductListPage />
-        </Route>
-
+        
         <Route path="/view-product/:id">
           <ProductDetailPage />
         </Route>
@@ -39,6 +36,10 @@ function AppEndUser() {
 
         <Route path="/thank-you">
           <ThankYou />
+        </Route>
+
+        <Route path="/" exact={true}>
+          <ProductListPage />
         </Route>
       </Switch>      
     </>

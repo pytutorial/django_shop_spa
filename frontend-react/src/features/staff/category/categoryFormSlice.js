@@ -1,82 +1,62 @@
 import { createSlice } from '@reduxjs/toolkit';
 import axios from 'axios';
+import history from 'router_history';
 
 const categoryFormSlice = createSlice({
   name: 'categoryFormSlice',
   initialState: {
-    errors: {},
     category: {},
-    saved: false
+    errors: {},
   },
 
   reducers: {
-    saveCategorySuccess(state, _) {
-      state.saved = true;
-    },
-
-    saveCategoryFail(state, action) {
-      state.errors = action.payload || {};
-    },
-
-    fetchCategorySuccess(state, action) {      
-      state.category = action.payload || {};      
-    },
-
-    setErrors(state, action) {
-      state.errors = action.payload.errors;
-    },
-
-    clearErrors(state, _) {
-      state.errors = {};
-    },
-
-    clearData(state, _) {
-      state.errors = {};
-      state.saved = false;
-      state.category = {};
+    setState(state, action) {
+      for(let key in action.payload){
+        state[key] = action.payload[key];
+      }
     }
   }
 });
 
 export const {
-  saveCategorySuccess,
-  saveCategoryFail,
-  fetchCategorySuccess,
-  setErrors,
-  clearErrors,
-  clearData,
+  setState
 } = categoryFormSlice.actions;
 
 export default categoryFormSlice.reducer;
 
-export function saveCategory(id, data) {  
-  return async dispatch => {
-    
-    if (!id) {
-      axios.post('/api/category/', data)
-        .then(result => {
-          dispatch(saveCategorySuccess(result.data));
-
-        }).catch(e => {        
-          dispatch(saveCategoryFail(e.response.data));
-        })
-
-    } else {
-      axios.put(`/api/category/${id}/`, data)
-        .then(result => {
-          dispatch(saveCategorySuccess(result.data));
-
-        }).catch(e => {
-          dispatch(saveCategoryFail(e.response.data));
-        })
+export function initPage(id) {
+  return dispatch => {
+    dispatch(setState({category: {}, errors: {}}));
+    if(id) {
+      axios.get(`/api/category/${id}`).then(result => {
+        dispatch(setState({category: result.data}));
+      });
     }
   }
 }
 
-export function fetchCategory(id) {
-  return async dispatch => {
-    axios.get(`/api/category/${id}`).then(result => {
-      dispatch(fetchCategorySuccess(result.data));
-    });
+export function saveCategory(id, data) {
+  return dispatch => {
+    
+    dispatch(setState({errors: {}}));
+    
+    if(!id) {
+      axios.post('/api/category/', data)
+        .then(_ => {
+          history.push('/staff');
+
+        }).catch(e => {
+          dispatch(setState({errors: e.response?.data}));
+        });
+
+      }else {
+        axios.put(`/api/category/${id}/`, data)
+        .then(_ => {
+          history.push('/staff');
+
+        }).catch(e => {
+          dispatch(setState({errors: e.response?.data}));
+        });
+    }
   }
 }

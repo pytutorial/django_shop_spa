@@ -1,51 +1,27 @@
-import React, {useEffect, useState} from "react";
-import { useSelector, useDispatch } from 'react-redux';
-import {useHistory} from "react-router-dom";
-import PaginationBar from "components/PaginationBar";
+import React, {useEffect } from "react";
+import {Link} from "react-router-dom";
 
+import PaginationBar from "components/PaginationBar";
 import {BACKEND_URL, PAGE_SIZE} from "utils/Constants";
-import { setPage, setSearchParams, fetchProductList, deleteProduct, clearError } from "./productListSlice";
-import { clearData as clearFormData } from "./productFormSlice";
-import { setLoading } from "../category/categoryListSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { deleteProduct, searchProduct, setPage } from "./productListSlice";
 
 export default function ProductListPage() {
-  const history = useHistory();
   const dispatch = useDispatch();
-  
   const state = useSelector(globalState => globalState.productList) || {};
-  const [name, setName] = useState(state.name);
 
-  useEffect(() => {
-    dispatch(setLoading(true));
-    dispatch(fetchProductList());
-  }, [state.name, state.page]);
+  useEffect(() => dispatch(searchProduct()), [dispatch]);
 
+  const onSearchProduct = (e) => {
+    e.preventDefault();
+    const data = new FormData(document.getElementById('fmt'));
+    dispatch(searchProduct(data.get('keyword'), 1));
+  }
+  
   const offset = (state.page - 1) * PAGE_SIZE;
 
-  const items = state.items;
+  const items = state.items || [];
   const loading = state.loading;
-
-  const searchProduct = (e) => {
-    e.preventDefault();
-    dispatch(setSearchParams({name: name}));
-  }
-
-  const confirmDelete = (id) => {
-    if(window.confirm('Bạn có muốn xóa sản phẩm này?')) {
-      dispatch(clearError());
-      dispatch(deleteProduct(id));
-    }
-  } 
-
-  const addProduct = () => {
-    dispatch(clearFormData());
-    history.push('/staff/product/create');
-  }
-
-  const editProduct = (id) => {
-    dispatch(clearFormData());
-    history.push(`/staff/product/update/${id}`);
-  }
 
   return (
     <div className="p-3">
@@ -56,16 +32,16 @@ export default function ProductListPage() {
         <div className="card-body">
           <div className="row mb-4">
             <div className="col-3">
-              <button className="btn btn-sm btn-primary"
-                onClick={addProduct}
+              <Link className="btn btn-sm btn-primary"
+                to="/staff/product/create"
               >
                 Thêm sản phẩm
-              </button>
+              </Link>
             </div>
             <div className="col-6 offset-3">
-              <form onSubmit={searchProduct}>
-                <input className="form-control" placeholder='Tìm theo tên sản phẩm'
-                  value={name} onChange={e => setName(e.target.value)}/>
+              <form id="fmt" onSubmit={onSearchProduct}>
+                <input key={[state.page]} name="keyword" className="form-control" placeholder='Tìm theo tên sản phẩm'
+                  defaultValue={state.keyword} />
               </form>
             </div>
           </div>
@@ -82,7 +58,7 @@ export default function ProductListPage() {
                 </tr>
               </thead>
               <tbody>
-                {!loading && items && items.length == 0 &&
+                {!loading && items && items.length === 0 &&
                   <tr><td colSpan="6">Không tìm thấy sản phẩm nào</td></tr>
                 }
                 {!loading && items && items.map((product, i) => 
@@ -93,17 +69,17 @@ export default function ProductListPage() {
                     <td className="text-center">{product.price}</td>
                     <td className="text-center">
                       {product.image &&
-                        <img style={{width: "90%", maxHeight: "250px"}} src={BACKEND_URL + product.image}/>
+                        <img style={{width: "90%", maxHeight: "250px"}} src={BACKEND_URL + product.image} alt=""/>
                       }
                     </td>
                     <td className='text-center'>
-                      <button className='btn btn-sm btn-primary mr-2' 
-                        onClick={() => editProduct(product.id)}
+                      <Link className='btn btn-sm btn-primary mr-2' 
+                        to={`/staff/product/update/${product.id}`}
                       >
                         Chỉnh sửa
-                      </button>
+                      </Link>
                       <button className='btn btn-sm btn-danger' 
-                        onClick={(e) => confirmDelete(product.id)}
+                        onClick={(e) => dispatch(deleteProduct(product.id))}
                       >
                         Xóa
                       </button>
@@ -116,7 +92,7 @@ export default function ProductListPage() {
             <PaginationBar total={state.total}
               pageSize={PAGE_SIZE}
               page={state.page}
-              setPage={(page) => dispatch(setPage(page))}
+              setPage={(page) => dispatch(setPage(page)) }
             />
             <span style={{color: 'red'}}>{state.error}</span>
           </div>
