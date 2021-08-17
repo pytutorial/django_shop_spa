@@ -44,16 +44,15 @@ export default {
   },
 
   methods:{
-    async signUp() {
+    signUp() {
       this.error = '';
       if(this.password != this.password2) {
         this.error = 'Mật khẩu xác thực không đúng';
         return;
       }
 
-      await axios.post('/api/signup', {username: this.username, password: this.password})
-        .then(result => {
-          console.log(result);
+      axios.post('/api/signup', {username: this.username, password: this.password})
+        .then(() => {
 
           axios.post('/api/token', { username: this.username, password: this.password })
             .then(result => {

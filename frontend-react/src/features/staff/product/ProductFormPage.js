@@ -1,25 +1,64 @@
 import React, { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useHistory, useParams } from "react-router-dom";
+import axios from 'axios';
 
-import { useDispatch, useSelector } from "react-redux";
-import { initPage, saveProduct } from "./productFormSlice";
+import { SLICE_NAME } from "./productFormReducer";
+import { useSliceSelector, useSliceStore } from "utils/Helper";
+import ErrorList from "components/ErrorList";
 
 export default function ProductFormPage() {
-  const dispatch = useDispatch();
-  
-  const state = useSelector(globalState => globalState.productForm) || {};
+  const store = useSliceStore(SLICE_NAME);
+  const history = useHistory();
   const {id} = useParams();
 
-  useEffect(() => dispatch(initPage(id)), [dispatch, id]);
+  useEffect(() => {
+    store.setState({product: {}, errors: {}});
 
-  const onSaveProduct = (e) => {
+    axios.get('/api/category').then(result => {
+      store.setState({categoryList: result.data});
+    });
+
+    if (id) {
+      axios.get(`/api/product/${id}`).then(result => {
+        store.setState({product: result.data});
+      });
+    }
+  }, [id]);
+
+  const saveProduct = (e) => {
     e.preventDefault();
     const data = new FormData(document.getElementById('fmt'));
-    dispatch(saveProduct(id, data));
+        
+    store.setState({errors: {}});
+    let url, method;
+
+    if(!id) {
+      method = 'post';
+      url = '/api/product/'
+    }else{
+      method = 'put';
+      url = `/api/product/${id}/`;
+    }
+
+    axios({method, url, data})
+      .then(_ => {
+        if(method === 'post') {
+          store.dispatchGlobal({                    // Reset data
+            type: 'productList/setState', 
+            payload: {
+              page: 1,
+              keyword: '',
+            }}
+          );
+        }
+        history.push('/staff/product/');
+      }).catch(e => {
+        store.setState({errors: e.response.data});
+      });
   };
 
-  const product = state.product || {};
-  const errors = state.errors || {};
+  const [product, categoryList, errors]  = useSliceSelector(SLICE_NAME, 
+        ['product', 'categoryList', 'errors']);
 
   return (
     <div className="p-3">
@@ -28,7 +67,7 @@ export default function ProductFormPage() {
           <h6>Thông tin sản phẩm</h6>
         </div>
         <div className="card-body">
-          <form id="fmt" onSubmit={onSaveProduct} encType="multipart/form-data">
+          <form id="fmt" onSubmit={saveProduct} encType="multipart/form-data">
             <table className='table'>
               <tbody>
                 <tr>
@@ -39,9 +78,7 @@ export default function ProductFormPage() {
                       defaultValue={product.code}
                       name='code' />
 
-                    <ul style={{ color: "red" }}>
-                      {errors['code'] && errors['code'].map((e,i) => <li key={i}>{e}</li>)}
-                    </ul>
+                    <ErrorList errors={errors.code}/>
                   </td>
                 </tr>
 
@@ -55,16 +92,14 @@ export default function ProductFormPage() {
                       name='category'
                     >
                       <option value=''>----Chọn nhóm sản phẩm----</option>
-                      {state.categoryList && state.categoryList.map((c, i) =>
+                      {categoryList && categoryList.map((c, i) =>
                         <option key={i} value={c.id}>
                           {c.name}
                         </option>
                       )}
                     </select>
 
-                    <ul style={{ color: "red" }}>
-                      {errors['category'] && errors['category'].map((e,i) => <li key={i}>{e}</li>)}
-                    </ul>
+                    <ErrorList errors={errors.category}/>
                   </td>
                 </tr>
 
@@ -76,9 +111,7 @@ export default function ProductFormPage() {
                       defaultValue={product.name}
                       name='name' />
 
-                    <ul style={{ color: "red" }}>
-                      {errors['name'] && errors['name'].map((e,i) => <li key={i}>{e}</li>)}
-                    </ul>
+                    <ErrorList errors={errors.name}/>
                   </td>
                 </tr>
 
@@ -91,9 +124,7 @@ export default function ProductFormPage() {
                       defaultValue={product.price}
                       name='price' />
 
-                    <ul style={{ color: "red" }}>
-                      {errors['price'] && errors['price'].map((e,i) => <li key={i}>{e}</li>)}
-                    </ul>
+                    <ErrorList errors={errors.price}/>
                   </td>
                 </tr>
 
@@ -104,10 +135,12 @@ export default function ProductFormPage() {
                       type="file"
                       className="form-control-file"
                       name='image' />
+                    
+                    {product.image &&
+                      <a target="_blank" href={product.image}><small>Ảnh đã upload</small></a>
+                    }
 
-                    <ul style={{ color: "red" }}>
-                      {errors['image'] && errors['image'].map((e,i) => <li key={i}>{e}</li>)}
-                    </ul>
+                    <ErrorList errors={errors.image}/>
                   </td>
                 </tr>
               </tbody>

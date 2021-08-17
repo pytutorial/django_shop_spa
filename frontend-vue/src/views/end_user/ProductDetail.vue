@@ -35,6 +35,7 @@ export default {
       product: {},
     };
   },
+
   mounted() {
     let id = this.$route.params.id;
     if (id) {

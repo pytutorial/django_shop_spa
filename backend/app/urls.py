@@ -6,7 +6,6 @@ urlpatterns = [
     path('order-product/<id>', orderProduct),
     
     path('order/search', searchOrder),
-    path('order/count', countOrder),
     path('order/<id>', getOrderDetail),
     path('order/confirm/<id>', confirmOrder),
     path('order/cancel/<id>', cancelOrder),

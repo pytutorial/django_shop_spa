@@ -54,7 +54,7 @@
       Quay lại
     </router-link>
     <template v-if="order.status==0">
-      <button class="btn btn-primary mr-2" type="button" @click="confirmOrderDelivered()">
+      <button class="btn btn-primary mr-2" type="button" @click="confirmOrder()">
         Xác nhận đơn hàng đã được giao
       </button>
       <button class="btn btn-danger" type="button" @click="cancelOrder()">
@@ -75,7 +75,7 @@ export default {
     }
   },
   methods: {
-    async confirmOrderDelivered() {
+    confirmOrder() {
       if(!confirm('Xác nhận đơn hàng đã được giao?')){
         return;
       }
@@ -84,8 +84,7 @@ export default {
 
       let id = this.$route.params.id;
       if(id) {
-        axios.post(`/api/order/confirm/${id}`).then(result => {
-          console.log(result);
+        axios.post(`/api/order/confirm/${id}`).then(() => {
           this.$router.push('/staff/order');
         }).catch(e => {
           this.error = e.toString();
@@ -93,7 +92,7 @@ export default {
       }
     },
 
-    async cancelOrder() {
+    cancelOrder() {
       if(!confirm('Hủy đơn hàng này')) {
         return;
       }
@@ -101,8 +100,7 @@ export default {
       this.error = '';
       let id = this.$route.params.id;
       if(id) {
-        axios.post(`/api/order/cancel/${id}`).then(result => {
-          console.log(result);
+        axios.post(`/api/order/cancel/${id}`).then(() => {
           this.$router.push('/staff/order');
         }).catch(e => {
           this.error = e.toString();
@@ -111,7 +109,7 @@ export default {
     }
   },
 
-  async mounted() {    
+  mounted() {    
     let id = this.$route.params.id;
     
     if(id) {

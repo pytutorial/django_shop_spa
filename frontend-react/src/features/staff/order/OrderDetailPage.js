@@ -1,19 +1,57 @@
 import React, {useEffect} from "react";
-import { Link, useParams } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { confirmOrder, cancelOrder, initPage } from "./orderDetailSlice";
+import { Link, useParams, useHistory } from "react-router-dom";
+import axios from 'axios';
+
+import { SLICE_NAME } from "./orderDetailReducer";
+import { useSliceSelector, useSliceStore } from "utils/Helper";
 
 export default function OrderDetailPage() {
-  const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.orderDetail);
-  
+  const store = useSliceStore(SLICE_NAME);
   const {id} = useParams();
+  const history = useHistory();
 
-  useEffect(() => dispatch(initPage(id)), [dispatch, id]);
+  useEffect(() => {
+    store.setState({order:{}, error: ''});
   
-  const order = state.order || {};
-  const error = state.error;
+    axios.get(`/api/order/${id}`).then(result => {
+      store.setState({order: result.data});
+    });
+  }, [id]);
 
+  const confirmOrder = () => {
+    if(!window.confirm('Xác nhận đơn hàng này đã được giao?')) {
+      return;
+    }
+  
+    store.setState({error: ''});
+  
+    axios.post(`/api/order/confirm/${id}`)
+      .then(_ => {
+        history.push('/staff/order');
+  
+      }).catch(e =>
+        store.setState({error: e.toString()})
+      );
+  }
+
+  const cancelOrder = () => {
+    if(!window.confirm('Hủy đơn hàng này ?')) {
+      return;
+    }
+  
+    store.setState({error: ''});
+  
+    axios.post(`/api/order/cancel/${id}`)
+      .then(_ => {
+        history.push('/staff/order');
+  
+      }).catch(e =>
+        store.setState({error: e.toString()})
+      );
+  }
+
+  const [order, error] = useSliceSelector(SLICE_NAME, ['order', 'error']);
+  
   return (
     <div className="p-3">
       <div className="card shadow">
@@ -81,12 +119,12 @@ export default function OrderDetailPage() {
           {order.status === 0 &&
             <>
               <button className="btn btn-primary mr-2" type="button" 
-                onClick={() => dispatch(confirmOrder(id))}
+                onClick={confirmOrder}
               >
                 Xác nhận đơn hàng đã được giao
               </button>
               <button className="btn btn-danger" type="button" 
-                onClick={() => dispatch(cancelOrder(id))}
+                onClick={cancelOrder}
               >
                 Hủy đơn hàng
               </button>

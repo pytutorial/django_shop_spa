@@ -23,9 +23,7 @@
             <div style="width:50px">
               <input type="number" class="form-control" name="qty" value="1" min="1" />
             </div>
-            <ul style="color:red">
-              <li v-for="(e,i) in errors['qty']||[]" :key="i">{{e}}</li>
-            </ul>
+            <error-list :errors="errors.qty"></error-list>
           </td>
         </tr>
         <tr>
@@ -37,27 +35,21 @@
           <th>Họ và tên:</th>
           <td>
             <input class="form-control" name="customerName" />
-            <ul style="color:red">
-              <li v-for="(e,i) in errors['customerName']||[]" :key="i">{{e}}</li>
-            </ul>
+            <error-list :errors="errors.customerName"></error-list>
           </td>
         </tr>
         <tr>
           <th>Số điện thoại:</th>
           <td>
             <input class="form-control" name="customerPhone" />
-            <ul style="color:red">
-              <li v-for="(e,i) in errors['customerPhone']||[]" :key="i">{{e}}</li>
-            </ul>
+            <error-list :errors="errors.customerPhone"></error-list>
           </td>
         </tr>
         <tr>
           <th>Địa chỉ:</th>
           <td>
             <input class="form-control" name="customerAddress" />
-            <ul style="color:red">
-              <li v-for="(e,i) in errors['customerAddress']||[]" :key="i">{{e}}</li>
-            </ul>
+            <error-list :errors="errors.customerAddress"></error-list>
           </td>
         </tr>
       </table>
@@ -70,8 +62,11 @@
 
 <script>
 import axios from "axios";
+import ErrorList from "@/components/ErrorList";
 
 export default {
+  components: {ErrorList},
+
   data() {
     return {
       product: {},
@@ -80,13 +75,12 @@ export default {
   },
 
   methods: {
-    async orderProduct() {
+    orderProduct() {
       let id = this.$route.params.id;
       if(id) {
         this.errors = {};
         let data = new FormData(document.getElementById('fmt'));
-        axios.post(`/api/order-product/${id}`, data).then(result => {
-          console.log(result);
+        axios.post(`/api/order-product/${id}`, data).then(() => {
           this.$router.push('/thank-you');
 
         }).catch(e => {
@@ -96,7 +90,7 @@ export default {
     }
   },
 
-  async mounted() {
+  mounted() {
     let id = this.$route.params.id;
     if (id) {
       axios.get(`/api/product/${id}`).then((result) => this.product = result.data);

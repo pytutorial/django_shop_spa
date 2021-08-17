@@ -2,21 +2,21 @@
   <div class="container mt-5 mb-5">
     <div class="row">
       <div class="col-3 p-3 card">
-        <form @submit.prevent="fetchProductList()">
+        <form id="fmt" @submit.prevent="searchProduct()">
           <div class='product-search-info mt-3'>
             <label><b>Tên sản phẩm</b></label>
-            <input v-model="name" class="form-control" placeholder="Nhập tên sản phẩm để tìm">
+            <input name='keyword' :value="keyword" class="form-control" placeholder="Nhập tên sản phẩm để tìm">
           </div>
 
           <div class='category-search-info mt-3'>
             <label><b>Hãng sản xuất:</b></label>
             <div>
-              <input type='radio' v-model='categoryId' value=''>
+              <input type='radio' :checked="!categoryId" name='categoryId' value=''>
               <label>Tất cả</label>
             </div>
             
             <div v-for='c in categoryList' :key="c.id">
-              <input type="radio"  v-model='categoryId' :value='c.id'>
+              <input type="radio" name='categoryId' :checked="c.id==categoryId" :value='c.id'>
               <label>{{c.name}}</label>
             </div>
             
@@ -25,22 +25,22 @@
           <div class='price-search-info mt-3'>
             <label><b>Mức giá:</b></label>
             <div>
-              <input type="radio" v-model="priceRangeId" value=''>
+              <input type="radio" name="priceRangeId" :checked="!priceRangeId" value=''>
               <label>Tất cả</label>
             </div>
 
             <div>
-              <input type="radio" v-model="priceRangeId" value='1'>
+              <input type="radio" name="priceRangeId" :checked="priceRangeId==1" value='1'>
               <label>Dưới 10 triệu</label>
             </div>
 
             <div>
-              <input type="radio" v-model="priceRangeId" value='2'>
+              <input type="radio" name="priceRangeId" :checked="priceRangeId==2" value='2'>
               <label>Từ 10-20 triệu</label>
             </div>
 
             <div>
-              <input type="radio" v-model="priceRangeId" value='3'>
+              <input type="radio" name="priceRangeId" :checked="priceRangeId==3" value='3'>
               <label>Trên 20 triệu</label>
             </div>
           </div>
@@ -81,59 +81,81 @@
 
 <script>
 import axios from "axios";
+import {savePageStates, loadPageStates} from "@/utils/Helper";
 import {BACKEND_URL, PAGE_SIZE} from "@/utils/Constants.js";
 
 export default {
   data() {
     return {
+      pageName: 'productListUser',
       pageSize: PAGE_SIZE,
       backEndUrl: BACKEND_URL,
       items: null,
       page: 1,
       total: 0,
       categoryList: [],
-      name: "",
-      categoryId: "",
-      priceRangeId: "",
+      keyword: '',
+      priceRangeId: '',
+      categoryId: ''
     };
   },
   methods: {
-    async fetchCategoryList() {
-      axios.get('/api/category/').then(result => this.categoryList = result.data);
+ 
+    fetchProductList(keyword, categoryId, priceRangeId, page) {
+      this.keyword = keyword ?? '';
+      this.categoryId = categoryId ?? '';
+      this.priceRangeId = priceRangeId ?? '';
+      this.page = page ?? 1;
+      
+      savePageStates(this.pageName, {
+        keyword: this.keyword, 
+        categoryId: this.categoryId,
+        priceRangeId: this.priceRangeId,
+        page: this.page
+      });
+
+      const start = (this.page - 1) * this.pageSize;
+
+      const url = `/api/product/search?name=${this.keyword}` +
+                  `&categoryId=${this.categoryId}` +
+                  `&priceRangeId=${this.priceRangeId}` +
+                  `&start=${start}` +
+                  `&count=${this.pageSize}`;
+
+      axios.get(url).then(result => {
+        const {total, items} = result.data;
+        this.total = total;
+        this.items = items;
+      });
     },
-    
 
-    async fetchProductList() {
-      axios.get(`/api/product/count?name=${this.name}` +
-                `&categoryId=${this.categoryId}` +
-                `&priceRangeId=${this.priceRangeId}`).then(                
-                result => this.total = result.data.count
-              );
-
-      let start = (this.page - 1) * this.pageSize;
-
-      axios.get(`/api/product/search?name=${this.name}` +
-                `&categoryId=${this.categoryId}` +
-                `&priceRangeId=${this.priceRangeId}` +
-                `&start=${start}` +
-                `&count=${this.pageSize}`).then(
-                result => this.items = result.data
-              );
-    },
-    
+    searchProduct() {
+      const data = new FormData(document.getElementById('fmt'));
+      this.keyword = data.get('keyword');
+      this.categoryId = data.get('categoryId');
+      this.priceRangeId = data.get('priceRangeId');
+      this.fetchProductList(this.keyword, this.categoryId, this.priceRangeId, 1);
+    }
   },
 
   watch: {
     page: function(newVal, oldVal){
       if(newVal != oldVal) {
-        this.fetchProductList();
+        this.fetchProductList(this.keyword, this.categoryId, this.priceRangeId, newVal);
       }
     }
   },
 
-  async mounted() {
-    this.fetchCategoryList();
-    this.fetchProductList();
+  mounted() {
+    axios.get('/api/category/').then(result => this.categoryList = result.data);
+    const {
+      keyword,
+      categoryId,
+      priceRangeId,
+      page
+    } = loadPageStates(this.pageName)
+    
+    this.fetchProductList(keyword, categoryId, priceRangeId, page);
   },
 };
 </script>

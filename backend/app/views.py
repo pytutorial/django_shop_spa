@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, action
@@ -16,15 +17,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
     serializer_class = CategorySerializer
     queryset = Category.objects.all()
 
-    def searchCategory(self, name):
-        return Category.objects.filter(name__icontains=name)
-
-    @action(detail=False, methods=['get'])
-    def count(self,request):
-        name = request.GET.get('name', '')
-        total = len(self.searchCategory(name))
-        return Response({'count' : total})
-
     @action(detail=False, methods=['get'])
     def search(self, request):
         name = request.GET.get('name', '')
@@ -35,10 +27,18 @@ class CategoryViewSet(viewsets.ModelViewSet):
         count = request.GET.get('count', '')
         count = int(count) if count.isdigit() else PAGE_SIZE
 
-        categoryList = self.searchCategory(name)
+        categoryList = Category.objects.filter(name__icontains=name).order_by('-id')
+        total = categoryList.count()
         items = categoryList[start:start+count]
 
         data = CategorySerializer(items, many=True).data
+        return Response({'items': data, 'total': total})
+
+    @action(detail=True, methods=['get'])
+    def get_detail(self, request, pk):
+        time.sleep(2)
+        category = Category.objects.get(pk=pk)
+        data = CategorySerializer(instance=category).data
         return Response(data)
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -80,11 +80,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         return productList
 
     @action(detail=False, methods=['get'])
-    def count(self,request):        
-        total = len(self.searchProduct(request.GET))
-        return Response({'count' : total})
-
-    @action(detail=False, methods=['get'])
     def search(self, request):        
         start = request.GET.get('start', '')
         start = int(start) if start.isdigit() else 0
@@ -92,11 +87,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         count = request.GET.get('count', '')
         count = int(count) if count.isdigit() else PAGE_SIZE
 
-        productList = self.searchProduct(request.GET)
+        productList = self.searchProduct(request.GET).order_by('-id')
+        total = productList.count()
         items = productList[start:start+count]
 
         data = ProductSerializer(items, many=True).data
-        return Response(data)
+        return Response({'items': data, 'total': total})
 
 @api_view(['post'])
 def signup(request):
@@ -134,30 +130,20 @@ def searchOrder(request):
                 Q(customerName__icontains=keyword)|
                 Q(customerPhone__icontains=keyword)
             )
+    
+    orderList = orderList.order_by('status', '-orderDate')
+
+    total = orderList.count()
+
     start = request.GET.get('start', '')
     start = int(start) if start.isdigit() else 0
     
     count = request.GET.get('count', '')
     count = int(count) if count.isdigit() else PAGE_SIZE
     
-    
     items = orderList[start:start+count]
     serializer = OrderSerializer(items, many=True)
-    return Response(serializer.data)
-
-@api_view(['get'])
-def countOrder(request):
-    keyword = request.GET.get('keyword')
-    orderList = Order.objects.all()
-    
-    if keyword:
-        orderList = orderList.filter(
-                Q(product__name__icontains=keyword)|
-                Q(customerName__icontains=keyword)|
-                Q(customerPhone__icontains=keyword)
-            )
-
-    return Response({'count': orderList.count()})
+    return Response({'items': serializer.data, 'total': total})
 
 @api_view(['get'])
 def getOrderDetail(request, id):

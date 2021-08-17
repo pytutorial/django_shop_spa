@@ -3,8 +3,8 @@
     <h4>Danh sách sản phẩm</h4>
     <div class="row my-3">
       <div class="col">
-        <form @submit.prevent="fetchProductList()">
-          <input v-model="name" class="form-control" placeholder="Tìm theo tên sản phẩm">
+        <form id="fmt" @submit.prevent="searchProduct()">
+          <input :value="keyword" name="keyword" class="form-control" placeholder="Tìm theo tên sản phẩm">
         </form>
       </div>
     </div>
@@ -33,10 +33,10 @@
             <img v-if="p.image" style="width: 90%; max-height: 250px;" :src="backEndUrl + p.image">
           </td>
           <td class="text-center">
-            <router-link class="btn btn-secondary mr-2" :to='`/staff/product/update/${p.id}`'>
+            <router-link class="btn btn-sm btn-secondary mr-2" :to='`/staff/product/update/${p.id}`'>
               Chỉnh sửa
             </router-link>
-            <button class="btn btn-danger" @click="confirmDelete(p.id)">Xóa</button>
+            <button class="btn btn-sm btn-danger" @click="confirmDelete(p.id)">Xóa</button>
           </td>
         </tr>        
       </tbody>
@@ -53,18 +53,20 @@
     
     <div class="my-2" style="color:red">{{error}}</div>
     <router-link class="btn btn-primary mb-3" to="/staff/product/create">
-      Thêm nhóm sản phẩm
+      Thêm sản phẩm
     </router-link>
   </div>
 </template>
 
 <script>
 import axios from "axios";
+import {savePageStates, loadPageStates} from "@/utils/Helper";
 import {BACKEND_URL, PAGE_SIZE} from "@/utils/Constants";
 
 export default {
   data() {
     return {
+      pageName: 'productList',
       backEndUrl: BACKEND_URL,
       items: null,
       name: '',
@@ -76,31 +78,42 @@ export default {
   },
 
   methods: {
-    async confirmDelete(id) {
+    
+    fetchProductList(keyword, page) {
+      this.keyword = keyword ?? '';
+      this.page = page ?? 1;
+      savePageStates(this.pageName, {keyword: this.keyword, page: this.page});
+
+      const start = (this.page - 1) * this.pageSize;
+      const url = `/api/product/search?name=${this.keyword}&start=${start}&count=${this.pageSize}`;
+
+      axios.get(url).then(result => {
+        const {total, items} = result.data;
+        this.total = total;
+        this.items = items;
+      });
+    },
+
+    searchProduct() {
+      const data = new FormData(document.getElementById('fmt'));
+      const keyword = data.get('keyword');
+      this.fetchProductList(keyword, 1);
+    },
+
+    confirmDelete(id) {
       this.error = '';
       if(confirm('Bạn có muốn xóa sản phẩm này')) {
-        axios.delete(`/api/product/${id}/`).then(result => {
-          console.log(result);
-          this.fetchProductList();
+        axios.delete(`/api/product/${id}/`).then(() => {
+          const pageOffset = (this.page > 1 && this.total === (this.page-1) * this.pageSize + 1) ? 1 : 0;
+          this.fetchProductList(this.keyword, this.page - pageOffset);
         }).catch(e => this.error = e.toString());
       }
-    },
-
-    fetchProductList() {
-      axios.get(`/api/product/count?name=${this.name}`).then(result => {
-        this.total = result.data.count;
-      });
-
-      let start = (this.page - 1) * this.pageSize;
-
-      axios.get(`/api/product/search?name=${this.name}&start=${start}&count=${this.pageSize}`).then(
-        result => this.items = result.data
-      );
-    },
+    }
   },
 
   mounted() {
-    this.fetchProductList();
+    const {keyword, page} = loadPageStates(this.pageName);
+    this.fetchProductList(keyword, page);
   },
 
   computed: {
@@ -112,7 +125,7 @@ export default {
   watch: {
     page: function(newVal, oldVal){
       if(newVal != oldVal) {
-        this.fetchProductList();
+        this.fetchProductList(this.keyword, newVal);
       }
     }
   }

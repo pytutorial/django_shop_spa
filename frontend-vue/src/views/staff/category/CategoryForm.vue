@@ -8,18 +8,14 @@
             <th>Mã nhóm:</th>
             <td>
               <input class="form-control" name="code" v-model="category.code">
-              <ul style="color:red">
-                <li v-for="(e,i) in code_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.code"></error-list>
             </td>
           </tr>
           <tr>
             <th>Tên nhóm:</th>
             <td>
               <input class="form-control" name="name" v-model="category.name">
-              <ul style="color:red">
-                <li v-for="(e,i) in name_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.name"></error-list>
             </td>
           </tr>
         </tbody>
@@ -34,43 +30,47 @@
 
 <script>
 import axios from 'axios';
+import ErrorList from "@/components/ErrorList";
+import {savePageStates} from "@/utils/Helper";
 
 export default {
+  components: {ErrorList},
+
   data(){
     return {
       category: {},
       errors: {}
     }
   },
+
   methods: {
-    async saveCategory() {
-      let data = new FormData(document.getElementById('fmt'));      
-      let id = this.$route.params.id;
-      let success_cb = (result) => { console.log(result); this.$router.push('/staff') };
-      let error_cb = e => this.errors = e.response.data;
+    saveCategory() {
+      const data = new FormData(document.getElementById('fmt'));      
+      const id = this.$route.params.id;
 
-      if(id){
-        axios.put(`/api/category/${id}/`, data)
-          .then(success_cb)
-          .catch(error_cb);
+      let method, url;
+      
+      if(!id){
+        method = 'post';
+        url = '/api/category/';
       }else{
-        axios.post('/api/category/', data)
-          .then(success_cb)
-          .catch(error_cb);
+        method = 'put';
+        url = `/api/category/${id}/`;
       }
+
+      axios({method,url,data})
+        .then(() => {
+          if(method == 'post') {    // reset data
+            savePageStates('categoryList', '{}');
+          }
+          this.$router.push('/staff/');
+        }).catch(e => {
+          this.errors = e.response.data;
+        });
     }
   },
 
-  computed: {
-    code_errors() {
-      return this.errors['code'] || [];
-    },
-    name_errors() {
-      return this.errors['name'] || [];
-    }
-  },
-
-  async mounted() {
+  mounted() {
     let id = this.$route.params.id;
     if(id) {
       axios.get(`/api/category/${id}`).then(result => this.category = result.data);      

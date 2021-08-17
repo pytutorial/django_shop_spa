@@ -8,8 +8,6 @@ function App() {
   
   const loc = useLocation();
   const pathname = loc.pathname;
-
-  console.log('loc=', loc);
   
   if(pathname.startsWith('/staff')) {
     return <AppStaff/>;

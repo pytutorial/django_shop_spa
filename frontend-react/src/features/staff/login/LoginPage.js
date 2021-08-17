@@ -13,7 +13,6 @@ export default function LoginPage() {
 
     axios.post('/api/token', { username, password })
     .then(result => {
-      console.log(result.data);
       localStorage.setItem('token', result.data.access);
       history.push('/staff')
     }).catch(e => 

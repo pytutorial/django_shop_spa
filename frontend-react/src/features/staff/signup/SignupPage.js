@@ -24,7 +24,7 @@ export default function SignupPage() {
           localStorage.setItem('token', result.data.access);
           history.push('/staff/')
         });        
-      }).catch(e => setError(e.response.data));
+      }).catch(e => setError(e.response.data.error));
   };
 
   const styles = {

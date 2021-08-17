@@ -1,22 +1,30 @@
-import React, { useEffect } from "react";
+import React, {  useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
+import axios from 'axios';
 
-import { initPage } from "./productDetailSlice";
+import {  SLICE_NAME } from "./productDetailReducer";
+import { useSliceSelector, useSliceStore } from "utils/Helper";
 import "./ProductDetailPage.css";
-import { useDispatch, useSelector } from "react-redux";
 
 export default function ProductDetailPage() {
-  const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.productDetail);
   const { id } = useParams();
+  const store = useSliceStore(SLICE_NAME);
+  const [loading, product] = useSliceSelector(SLICE_NAME, ['loading' , 'product']);
 
-  useEffect(() => dispatch(initPage(id)), [dispatch, id]);
+  useEffect(() => {
+    store.setState({loading: true});
 
-  if(state.loading || !state.product){
+    axios.get(`/api/product/${id}`).then(result => {
+      store.setState({
+        product: result.data, 
+        loading: false
+      });
+    });
+  }, [id]);
+
+  if(loading || !product){
     return <></>;
   }
-
-  const product =  state.product;
 
   return (
     <div className="container mt-5 mb-5">

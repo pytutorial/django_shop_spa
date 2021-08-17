@@ -48,8 +48,7 @@ export default {
       .then(result => {
         localStorage.setItem('token', result.data.access);
         this.$router.push('/staff');
-      }).catch(e => {
-        console.log(e);
+      }).catch(() => {
         this.error = 'Tên đăng nhập hoặc mật khẩu không đúng';
       });
     }

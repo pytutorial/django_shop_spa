@@ -1,27 +1,56 @@
 import React, {useEffect} from "react";
 import { Link } from "react-router-dom";
+import axios from 'axios';
 
 import PaginationBar from "components/PaginationBar";
+import { useSliceSelector, useSliceStore } from "utils/Helper";
 import {PAGE_SIZE} from "utils/Constants";
 
-import { useDispatch, useSelector } from "react-redux";
-import { searchOrder, setPage } from "./orderListSlice";
+import { SLICE_NAME } from "./orderListReducer";
+
+function fetchOrderList({store, keyword, page}) {
+  store.setState({loading: true, total: 0, items: []});
+  keyword = keyword ?? '';
+  page = page ?? 1;
+  const start = (page-1) * PAGE_SIZE;
+  const url = `/api/order/search?keyword=${keyword}&start=${start}&count=${PAGE_SIZE}`;
+  
+  axios.get(url).then(result => {
+    const data = result.data;
+    store.setState({
+      total: data.total, 
+      items: data.items, 
+      keyword, 
+      page, 
+      loading: false
+    });
+  });
+}
 
 export default function OrderListPage() {
-  const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.orderList);
+  const store = useSliceStore(SLICE_NAME);
 
-  useEffect(() => dispatch(searchOrder()), [dispatch]);
+  useEffect(() => {
+    const {keyword, page} = store.getState();
+    fetchOrderList({store, keyword, page:page??1});
+  }, []);
 
-  const offset = (state.page - 1) * PAGE_SIZE;
-  const items = state.items;
-  const loading = state.loading;
-
-  const onSearchOrder = (e) => {
+  const searchOrder = (e) => {
     e.preventDefault();
     const data = new FormData(document.getElementById('fmt'));
-    dispatch(searchOrder(data.get('keyword'), 1));
+    const keyword = data.get('keyword');
+    fetchOrderList({store, keyword, page: 1});
   }
+  
+  const setPage = (page) => {
+    const {keyword} = store.getState();
+    fetchOrderList({store, keyword, page});
+  }
+
+  const [page, items, loading, keyword,total] = useSliceSelector(SLICE_NAME, 
+        ['page', 'items', 'loading',  'keyword', 'total']);
+
+  const offset = (page - 1) * PAGE_SIZE;
 
   return (
     <div className="p-3">
@@ -32,11 +61,11 @@ export default function OrderListPage() {
         <div className="card-body">
           <div className="row mb-4">
             <div className="col">
-              <form id="fmt" onSubmit={onSearchOrder}>
-                <input name="keyword" key={state.page} 
+              <form id="fmt" onSubmit={searchOrder}>
+                <input name="keyword" key={page} 
                   className="form-control" 
                   placeholder='Tìm theo tên sản phẩm/tên/số điện thoại Khách hàng'
-                  defaultValue={state.keyword}
+                  defaultValue={keyword}
                 />
               </form>
             </div>
@@ -49,9 +78,9 @@ export default function OrderListPage() {
                 <th style={{width: "20%"}}>Khách hàng</th>
                 <th style={{width: "20%"}}>Sản phẩm</th>
                 <th style={{width: "10%"}}>Số lượng</th>
-                <th style={{width: "15%"}}>Ngày đặt hàng</th>
-                <th style={{width: "20%"}}>Trạng thái</th>
-                <th style={{width: "10%"}}></th>
+                <th style={{width: "20%"}}>Ngày đặt hàng</th>
+                <th style={{width: "17%"}}>Trạng thái</th>
+                <th style={{width: "8%"}}></th>
               </tr>
             </thead>
             <tbody>        
@@ -74,7 +103,7 @@ export default function OrderListPage() {
                     {o.status === 2 && <span> Đã hủy </span>}                
                   </td>
                   <td className="text-center">
-                    <Link className="btn btn-secondary" 
+                    <Link className="btn btn-sm btn-secondary" 
                       to={`/staff/order/view-detail/${o.id}`}
                     >
                       Xem
@@ -85,10 +114,10 @@ export default function OrderListPage() {
             </tbody>
           </table>
 
-          <PaginationBar total={state.total}
+          <PaginationBar total={total}
             pageSize={PAGE_SIZE}
-            page={state.page}
-            setPage={(page) => dispatch(setPage(page))}
+            page={page}
+            setPage={setPage}
           />
 
         </div>

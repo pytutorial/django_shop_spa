@@ -3,8 +3,8 @@
     <h4>Danh sách đơn hàng</h4>
     <div class="row my-3">
       <div class="col">
-        <form @submit.prevent="fetchOrderList()">
-          <input v-model="keyword" class="form-control" placeholder="Tìm theo tên sản phẩm">
+        <form id="fmt" @submit.prevent="searchOrder()">
+          <input name="keyword" :value="keyword" class="form-control" placeholder="Tìm theo tên sản phẩm">
         </form>
       </div>
     </div>
@@ -59,11 +59,13 @@
 
 <script>
 import axios from "axios";
+import {savePageStates, loadPageStates} from "@/utils/Helper";
 import { PAGE_SIZE} from "@/utils/Constants";
 
 export default {
   data() {
     return {
+      pageName: 'orderList',
       items: null,
       keyword: '',
       pageSize: PAGE_SIZE,
@@ -73,16 +75,26 @@ export default {
   },
 
   methods: {
-    fetchOrderList() {
-      axios.get(`/api/order/count?keyword=${this.keyword}`).then(result => {
-        this.total = result.data.count;
-      });
+    fetchOrderList(keyword, page) {
+      this.keyword = keyword ?? '';
+      this.page = page ?? 1;
+      savePageStates(this.pageName, {keyword: this.keyword, page: this.page});
 
       let start = (this.page - 1) * this.pageSize;
-
-      axios.get(`/api/order/search?keyword=${this.keyword}&start=${start}&count=${this.pageSize}`).then(
-        result => this.items = result.data
-      );
+      let url = `/api/order/search?keyword=${this.keyword}&start=${start}&count=${this.pageSize}`;
+      
+      axios.get(url).then(result => {
+        const {total, items} = result.data;
+        this.total = total;
+        this.items = items;
+      });
+        
+    },
+  
+    searchOrder() {
+      const data = new FormData(document.getElementById('fmt'));
+      const keyword = data.get('keyword');
+      this.fetchOrderList(keyword, 1);
     }
   },
 
@@ -95,16 +107,14 @@ export default {
   watch: {
     page: function(newVal, oldVal){
       if(newVal != oldVal) {
-        this.fetchOrderList();
+        this.fetchOrderList(this.keyword, newVal);
       }
     }
   },
 
-  async mounted() {
-    this.fetchOrderList();
+  mounted() {
+    const {keyword, page} = loadPageStates(this.pageName);
+    this.fetchOrderList(keyword, page);
   }
 };
 </script>
-
-<style>
-</style>

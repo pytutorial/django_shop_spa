@@ -14,46 +14,38 @@
                 </option>
               </select>
 
-              <ul style="color:red">
-                <li v-for="(e,i) in category_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.category"></error-list>
             </td>
           </tr>
           <tr>
             <th>Mã SP:</th>
             <td>
               <input class="form-control" name="code" v-model="product.code">
-              <ul style="color:red">
-                <li v-for="(e,i) in code_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.code"></error-list>
             </td>
           </tr>
           <tr>
             <th>Tên SP:</th>
             <td>
               <input class="form-control" name="name" v-model="product.name">
-              <ul style="color:red">
-                <li v-for="(e,i) in name_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.name"></error-list>
             </td>
           </tr>
           <tr>
             <th>Đơn giá:</th>
             <td>
               <input type="number" min="0" class="form-control" name='price' v-model="product.price"/>
-
-              <ul style="color:red">
-                <li v-for="(e,i) in price_errors" :key="i">{{e}}</li>
-              </ul>
+              <error-list :errors="errors.price"></error-list>
             </td>
           </tr>
           <tr>
             <th>Ảnh:</th>
             <td>
               <input type="file" class="form-control-file" name='image' />
-              <ul style="color:red">
-                <li v-for="(e,i) in image_errors" :key="i">{{e}}</li>
-              </ul>
+              <a v-if="product.image" target="_blank" :href="product.image">
+                <small>Ảnh đã upload</small>
+              </a>
+              <error-list :errors="errors.image"></error-list>
             </td>
           </tr>
         </tbody>
@@ -68,8 +60,12 @@
 
 <script>
 import axios from 'axios';
+import ErrorList from "@/components/ErrorList";
+import {savePageStates} from "@/utils/Helper";
 
 export default {
+  components: {ErrorList},
+
   data(){
     return {
       categoryList: [],
@@ -77,62 +73,42 @@ export default {
       errors: {}
     }
   },
+
   methods: {
-    async fetchCategoryList() {
-      axios.get('/api/category/').then(result => this.categoryList = result.data);
-    },
-
-    async fetchProduct() {
-      let id = this.$route.params.id;
-      if(id) {
-        axios.get(`/api/product/${id}`).then(result => this.product = result.data);      
-      }
-    },
-
-    async saveProduct() {
+    saveProduct() {
       this.errors = {};
       let data = new FormData(document.getElementById('fmt'));      
       let id = this.$route.params.id;
-      let success_cb = (result) => { console.log(result); this.$router.push('/staff/product') };
-      let error_cb = e => this.errors = e.response.data;
 
-      if(id){
-        axios.patch(`/api/product/${id}/`, data)
-          .then(success_cb)
-          .catch(error_cb);
+      let method, url;
+
+      if(!id){
+        method = 'post';
+        url = '/api/product/';
       }else{
-        axios.post('/api/product/', data)
-          .then(success_cb)
-          .catch(error_cb);
+        method = 'put';
+        url = `/api/product/${id}/`;
       }
+
+      axios({method,url,data})
+        .then(() => {
+          if(method == 'post') {    // reset data
+            savePageStates('productList', '{}');
+          }
+          this.$router.push('/staff/product');
+        }).catch(e => {
+          this.errors = e.response.data;
+        });
     }
   },
 
-  computed: {
-    code_errors() {
-      return this.errors['code'] || [];
-    },
-
-    name_errors() {
-      return this.errors['name'] || [];
-    },
-
-    category_errors() {
-      return this.errors['category'] || [];
-    },
-
-    price_errors() {
-      return this.errors['price'] || [];
-    },
-
-    image_errors() {
-      return this.errors['image'] || [];
-    },
-  },
-
-  async mounted() {
-    this.fetchCategoryList();
-    this.fetchProduct();
+  mounted() {
+    axios.get('/api/category/').then(result => this.categoryList = result.data);
+    
+    let id = this.$route.params.id;
+    if(id) {
+      axios.get(`/api/product/${id}`).then(result => this.product = result.data);      
+    }
   }
 };
 </script>

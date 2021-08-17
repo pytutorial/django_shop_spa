@@ -3,8 +3,8 @@
     <h4>Danh sách nhóm sản phẩm</h4>
     <div class="row my-3">
       <div class="col">
-        <form @submit.prevent="fetchCategoryList()">
-          <input v-model="name" class="form-control" placeholder="Tìm theo tên nhóm sản phẩm">
+        <form id="fmt" @submit.prevent="searchCategory()">
+          <input :value="keyword" name="keyword" class="form-control" placeholder="Tìm theo tên nhóm sản phẩm">
         </form>
       </div>
     </div>
@@ -27,10 +27,10 @@
           <td>{{ c.code }}</td>
           <td>{{ c.name }}</td>
           <td class="text-center">
-            <router-link class="btn btn-secondary mr-2" :to='`/staff/category/update/${c.id}`'>
+            <router-link class="btn btn-sm btn-secondary mr-2" :to='`/staff/category/update/${c.id}`'>
               Chỉnh sửa
             </router-link>
-            <button class="btn btn-danger" @click="confirmDelete(c.id)">Xóa</button>
+            <button class="btn btn-sm btn-danger" @click="confirmDelete(c.id)">Xóa</button>
           </td>
         </tr>        
       </tbody>
@@ -54,13 +54,15 @@
 
 <script>
 import axios from "axios";
+import {savePageStates, loadPageStates} from "@/utils/Helper";
 import { PAGE_SIZE} from "@/utils/Constants";
 
 export default {
   data() {
     return {
+      pageName: 'categoryList',
       items: null,
-      name: '',
+      keyword: '',
       error: '',
       pageSize: PAGE_SIZE,
       page: 1,
@@ -69,27 +71,37 @@ export default {
   },
 
   methods: {
-    async confirmDelete(id) {
+    
+    fetchCategoryList(keyword, page) {
+      this.keyword = keyword ?? '';
+      this.page = page ?? 1;
+      savePageStates(this.pageName, {keyword: this.keyword, page: this.page});
+
+      const start = (this.page - 1) * this.pageSize;
+      const url = `/api/category/search?name=${this.keyword}&start=${start}&count=${this.pageSize}`;
+     
+      axios.get(url).then(result => {
+        const {total, items} = result.data;
+        this.total = total;
+        this.items = items;
+      });
+    },
+
+    searchCategory() {
+      const data = new FormData(document.getElementById('fmt'));
+      const keyword = data.get('keyword');
+      this.fetchCategoryList(keyword, 1);
+    },
+
+    confirmDelete(id) {
       this.error = '';
       if(confirm('Bạn có muốn xóa nhóm sản phẩm này')) {
-        axios.delete(`/api/category/${id}/`).then(result => {
-          console.log(result);
-          this.fetchCategoryList();
+        axios.delete(`/api/category/${id}/`).then(() => {
+          const pageOffset = (this.page > 1 && this.total === (this.page-1) * this.pageSize + 1) ? 1 : 0;
+          this.fetchCategoryList(this.keyword, this.page - pageOffset);
         }).catch(e => this.error = e.toString());
       }
     },
-
-    fetchCategoryList() {
-      axios.get(`/api/category/count?name=${this.name}`).then(result => {
-        this.total = result.data.count;
-      });
-
-      let start = (this.page - 1) * this.pageSize;
-
-      axios.get(`/api/category/search?name=${this.name}&start=${start}&count=${this.pageSize}`).then(
-        result => this.items = result.data
-      );
-    }
   },
 
   computed: {
@@ -101,13 +113,14 @@ export default {
   watch: {
     page: function(newVal, oldVal){
       if(newVal != oldVal) {
-        this.fetchCategoryList();
+        this.fetchCategoryList(this.keyword, newVal);
       }
     }
   },
 
   mounted() {
-    this.fetchCategoryList();
+    const {keyword, page} = loadPageStates(this.pageName);
+    this.fetchCategoryList(keyword, page);
   }
 };
 </script>

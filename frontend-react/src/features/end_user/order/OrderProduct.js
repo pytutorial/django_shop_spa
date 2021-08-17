@@ -1,29 +1,44 @@
 import React, { useEffect } from "react";
+import { useHistory, useParams } from "react-router-dom";
+import axios from 'axios';
 
-import { useParams } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { initPage, orderProduct } from "./orderProductSlice";
+import { SLICE_NAME } from "./orderProductReducer";
+import { useSliceSelector, useSliceStore } from "utils/Helper";
+import ErrorList from "components/ErrorList";
 
-export default function OrderProduct() {
-  const dispatch = useDispatch();
-  const state = useSelector(globalState => globalState.orderProduct);
-  
+export default function OrderProductPage() {
   const { id } = useParams();
+  const[product, errors] = useSliceSelector(SLICE_NAME, ['product', 'errors']);
+  const store = useSliceStore(SLICE_NAME);
+  const history = useHistory();
 
-  useEffect(() => dispatch(initPage(id)), [id]);
+  useEffect(() => {
+    store.setState({product: {}, loading: true});
 
-  const onOrderProduct = (e) => {
+    axios.get(`/api/product/${id}`).then(result => {
+      store.setState({
+        product: result.data,
+        loading: false
+      })
+    });
+  }, [id]);
+
+  const orderProduct = (e) => {
     e.preventDefault();
     const data = new FormData(document.getElementById('fmt'));
-    dispatch(orderProduct(id, data));
+    store.setState({errors: {}});
+
+    axios.post(`/api/order-product/${id}`, data).then(_ => {
+      history.push('/thank-you');
+
+    }).catch((e) => {
+      store.setState({errors: e.response.data});
+    });
   }
-  
-  const product = state.product || {};
-  const errors = state.errors || {};
-  
+
   return (
     <div className="container mt-5 mb-5">
-      <form id="fmt" onSubmit={onOrderProduct}>
+      <form id="fmt" onSubmit={orderProduct}>
         <h4>Đặt mua hàng trực tuyến</h4>
         <table className="table table-form">
           <tbody>
@@ -46,9 +61,7 @@ export default function OrderProduct() {
                 <div style={{ width: "50px" }}>
                   <input type="number" defaultValue={1} min="1" className="form-control" name="qty" />
                 </div>
-                <ul style={{ color: "red" }}>
-                  {errors['qty'] && errors['qty'].map(e => <li>{e}</li>)}
-                </ul>
+                <ErrorList errors={errors.qty}/>
               </td>
             </tr>
             <tr>
@@ -60,34 +73,28 @@ export default function OrderProduct() {
               <th>Họ và tên:</th>
               <td>
                 <input className="form-control" name="customerName" />
-                <ul style={{ color: "red" }}>
-                  {errors['customerName'] && errors['customerName'].map(e => <li>{e}</li>)}
-                </ul>
+                <ErrorList errors={errors.customerName}/>
               </td>
             </tr>
             <tr>
               <th>Số điện thoại:</th>
               <td>
                 <input className="form-control" name="customerPhone" />
-                <ul style={{ color: "red" }}>
-                  {errors['customerPhone'] && errors['customerPhone'].map(e => <li>{e}</li>)}
-                </ul>
+                <ErrorList errors={errors.customerPhone}/>
               </td>
             </tr>
             <tr>
               <th>Địa chỉ:</th>
               <td>
                 <input className="form-control" name="customerAddress" />
-                <ul style={{ color: "red" }}>
-                  {errors['customerAddress'] && errors['customerAddress'].map(e => <li>{e}</li>)}
-                </ul>
+                <ErrorList errors={errors.customerAddress}/>
               </td>
             </tr>
           </tbody>
         </table>
         <button type="submit" className="btn btn-primary">
           Đặt mua
-          </button>
+        </button>
       </form>
     </div>
   )
